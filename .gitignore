@@ -1,0 +1,11 @@
+docker/mysql/data/*
+!.gitkeep
+
+.env
+
+vendor/
+
+node_modules/
+
+.DS_Store
+
