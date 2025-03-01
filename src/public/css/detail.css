@@ -1,0 +1,182 @@
+.item{
+    display: flex;
+    justify-content: space-around;
+}
+
+.item__img{
+    width: 450px;
+    height: 550px;
+    background-color: rgb(208, 208, 208);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.sold{
+    position: relative;
+}
+
+.sold::before {
+    content: "";
+    top: 0;
+    left: 0;
+    border-bottom: 6em solid transparent;
+    border-left: 6em solid #c12748;
+    position: absolute;
+    z-index: 100;
+}
+.sold::after {
+    content: "Sold";
+    display: block;
+    top: 20px;
+    font-size: 20px;
+    font-weight: bold;
+    transform: rotate(-45deg);
+    color: #fff;
+    left: 5px;
+    position: absolute;
+    z-index: 101;
+}
+
+.item__info{
+    width: 450px;
+    height: 75vh;
+    overflow-y: scroll;
+}
+
+.item__info::-webkit-scrollbar{
+    display: none;
+}
+
+.item__name{
+    font-size: 36px;
+    margin-bottom: 30px;
+}
+
+.item__price{
+    font-size: 24px;
+    margin-bottom: 30px;
+}
+
+.item__form{
+    display: flex;
+}
+
+.item__like{
+    margin-left: 30px;
+    text-align: center;
+}
+
+.like__count{
+    margin-top: 10px;
+}
+
+.item__comment{
+    margin-left: 40px;
+    text-align: center;
+}
+
+.item__comment a{
+    width: fit-content;
+}
+
+.comment__count{
+    margin-top: 10px;
+}
+
+.item__purchase{
+    margin-top: 30px;
+}
+
+.item__section{
+    margin: 30px 0;
+    font-size: 24px;
+}
+
+.item__table th{
+    width: fit-content;
+    white-space: nowrap;
+    padding: 30px 50px 30px 0;
+}
+
+.item__table-category{
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.item__table li{
+    padding: 5px 15px;
+    border-radius: 15px;
+    background-color: #D9D9D9;
+    margin: 5px;
+}
+
+.comment_section{
+    margin-top: 50px;
+}
+
+.comment_section h3{
+    font-size: 24px;
+    color: #666666;
+}
+
+.comments{
+    margin-top: 30px;
+}
+
+.comment{
+    margin-top: 30px;
+}
+
+.comment:first-child{
+    margin-top: 0;
+}
+
+.comment__user{
+    display: flex;
+    align-items: center;
+}
+
+.user__img{
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #D9D9D9;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+}
+
+.user__name{
+    margin-left: 8px;
+    font-weight: bold;
+}
+
+.comment__content{
+    margin-top: 10px;
+    background-color: #D9D9D9;
+    border-radius: 5px;
+    width: 450px;
+    overflow-wrap: break-word;
+    padding: 15px;
+}
+
+.comment__form{
+    margin-top: 40px;
+}
+
+.comment__form-title{
+    font-weight: bold;
+}
+
+.comment__form-textarea{
+    width: 450px;
+    height: 150px;
+    overflow-y: scroll;
+    margin-top: 10px;
+    padding: 10px;
+}
+
+.comment__form-btn{
+    margin-top: 30px;
+}

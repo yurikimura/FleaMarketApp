@@ -1,0 +1,16 @@
+.user{
+    display: flex;
+    align-items: center;
+    margin-bottom: 50px;
+}
+
+.user__img{
+    width: 150px;
+    height: 150px;
+    margin-right: 60px;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    border-radius: 50%;
+    background-color: #d9d9d9;
+}
