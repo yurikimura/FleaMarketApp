@@ -32,7 +32,7 @@
                 </div>
                 <select class="purchase__value" name="" id="payment">
                     <option value="1">コンビニ払い</option>
-                    <option value="2">銀行振り込み</option>
+                    <option value="2">カード支払い</option>
                 </select>
             </div>
             <div class="purchase">

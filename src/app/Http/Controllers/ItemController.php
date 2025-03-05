@@ -64,4 +64,11 @@ class ItemController extends Controller
 
         return redirect()->route('item.detail',['item' => $item->id]);
     }
+
+    public function search(Request $request)
+    {
+        $query = $request->input('query');
+        $items = Item::where('name', 'LIKE', "%{$query}%")->get();
+        return view('search_results', compact('items'));
+    }
 }

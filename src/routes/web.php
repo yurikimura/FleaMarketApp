@@ -22,6 +22,7 @@ use App\Http\Middleware\SoldItemMiddleware;
 
 Route::get('/',[ItemController::class, 'index']);
 Route::get('/item/{item}',[ItemController::class, 'detail'])->name('item.detail');
+Route::get('/search', [ItemController::class, 'search'])->name('item.search');
 
 Route::middleware('auth')->group(function () {
     Route::get('/sell',[ItemController::class, 'sellView']);
