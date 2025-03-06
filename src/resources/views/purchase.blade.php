@@ -86,5 +86,22 @@ select.addEventListener('change', () => {
     target.textContent = txt;
 });
 
+// ここからStripeのスクリプトを追加
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+    var stripe = Stripe('{{ env('STRIPE_PUBLISHABLE_KEY') }}');
+    var purchaseButton = document.querySelector('.btn');
+
+    purchaseButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        stripe.redirectToCheckout({
+            sessionId: '{{ $sessionId ?? '' }}'
+        }).then(function (result) {
+            if (result.error) {
+                alert(result.error.message);
+            }
+        });
+    });
+</script>
 </script>
 @endsection

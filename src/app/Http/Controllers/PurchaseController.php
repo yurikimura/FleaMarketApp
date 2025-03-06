@@ -9,6 +9,8 @@ use App\Models\Item;
 use App\Models\User;
 use App\Models\SoldItem;
 use App\Models\Profile;
+use Stripe\Stripe;
+use Stripe\Checkout\Session;
 
 
 class PurchaseController extends Controller
@@ -20,14 +22,31 @@ class PurchaseController extends Controller
         return view('purchase',compact('item','user'));
     }
 
-    public function purchase($item_id){
-
+    public function purchase($item_id)
+    {
         $item = Item::find($item_id);
-        if ($item->user_id !== Auth::id()){
-            SoldItem::create([
-                'user_id' => Auth::id(),
-                'item_id' => $item_id
+        if ($item->user_id !== Auth::id()) {
+            // .envファイルからAPIキーを読み込む
+            Stripe::setApiKey(env('STRIPE_SECRET_KEY'));
+
+            $session = Session::create([
+                'payment_method_types' => ['card'],
+                'line_items' => [[
+                    'price_data' => [
+                        'currency' => 'jpy',
+                        'product_data' => [
+                            'name' => $item->name,
+                        ],
+                        'unit_amount' => $item->price * 100,
+                    ],
+                    'quantity' => 1,
+                ]],
+                'mode' => 'payment',
+                'success_url' => url('/success'),
+                'cancel_url' => url('/cancel'),
             ]);
+
+            return view('purchase', ['item' => $item, 'user' => Auth::user(), 'sessionId' => $session->id]);
         }
         return redirect('/');
     }
