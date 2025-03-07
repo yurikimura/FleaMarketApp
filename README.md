@@ -43,5 +43,8 @@ docker compose exec php php artisan config:cache
 - MySQL 10.3.39
 
 ## ER 図
+
+<img width="548" alt="Image" src="https://github.com/user-attachments/assets/92f542a5-44ff-4165-b6f7-472b1693a5fa" />
+
 - ホーム画面 http://localhost/
 - phpMyAdmin : http://localhost:8080/
