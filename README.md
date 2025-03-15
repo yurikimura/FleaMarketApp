@@ -12,9 +12,25 @@ docker compose exec php php artisan storage:link
 docker compose exec php chmod -R 777 storage bootstrap/cache
 ```
 
+.envで以下のように書き換える
+```
+DB_CONNECTION=mysql
+DB_HOST=mysql
+DB_PORT=3306
+DB_DATABASE=laravel_db
+DB_USERNAME=laravel_user
+DB_PASSWORD=laravel_pass
+```
+
 ### マイグレーション
 ```
 docker compose exec php php artisan migrate:fresh --seed
+```
+
+#### seedを追加
+```
+docker compose exec php php artisan db:seed --class=UserSeeder
+docker compose exec php php artisan db:seed --class=ItemSeeder
 ```
 
 ### 停止
