@@ -38,18 +38,35 @@
     <div class="items">
         @foreach ($items as $item)
         <div class="item">
-            <a href="/item/{{$item->id}}">
-                @if ($item->sold())
-                    <div class="item__img sold">
-                        <img src="{{ \Storage::url($item->img_url) }}" alt="商品画像">
-                    </div>
-                @else
-                    <div class="item__img">
-                        <img src="{{ \Storage::url($item->img_url) }}" alt="商品画像">
-                    </div>
-                @endif
-                <p class="item__name">{{$item->name}}</p>
-            </a>
+            @if(request()->get('page') == 'buy')
+                <!-- 購入した商品の場合はチャット画面へのリンク -->
+                <a href="/chat/{{$item->id}}">
+                    @if ($item->sold())
+                        <div class="item__img sold">
+                            <img src="{{ \Storage::url($item->img_url) }}" alt="商品画像">
+                        </div>
+                    @else
+                        <div class="item__img">
+                            <img src="{{ \Storage::url($item->img_url) }}" alt="商品画像">
+                        </div>
+                    @endif
+                    <p class="item__name">{{$item->name}}</p>
+                </a>
+            @else
+                <!-- 出品した商品の場合は商品詳細へのリンク -->
+                <a href="/item/{{$item->id}}">
+                    @if ($item->sold())
+                        <div class="item__img sold">
+                            <img src="{{ \Storage::url($item->img_url) }}" alt="商品画像">
+                        </div>
+                    @else
+                        <div class="item__img">
+                            <img src="{{ \Storage::url($item->img_url) }}" alt="商品画像">
+                        </div>
+                    @endif
+                    <p class="item__name">{{$item->name}}</p>
+                </a>
+            @endif
         </div>
         @endforeach
     </div>

@@ -37,4 +37,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/mypage', [UserController::class, 'mypage']);
     Route::get('/mypage/profile', [UserController::class, 'profile']);
     Route::post('/mypage/profile', [UserController::class, 'updateProfile']);
+    Route::get('/chat/{item_id}', [UserController::class, 'chat'])->name('chat.show');
+    Route::post('/chat/{item_id}', [UserController::class, 'sendMessage'])->name('chat.send');
+    Route::post('/chat/{item_id}/message', [UserController::class, 'sendMessage'])->name('chat.message.send');
+    Route::put('/messages/{message}', [UserController::class, 'updateMessage'])->name('message.update');
+    Route::delete('/messages/{message}', [UserController::class, 'deleteMessage'])->name('message.delete');
+    Route::get('/mypage/{user_id}/chat/{item_id}', [UserController::class, 'chat'])->name('chat');
+    Route::post('/mypage/{user_id}/chat/{item_id}/send', [UserController::class, 'sendMessage'])->name('chat.send');
+    Route::post('/transaction/{item_id}/complete', [UserController::class, 'completeTransaction'])->name('transaction.complete');
+    Route::post('/rating/store', [UserController::class, 'storeRating'])->name('rating.store');
 });

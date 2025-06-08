@@ -61,4 +61,78 @@ class User extends Authenticatable
     {
         return $this->hasMany('App\Models\Item');
     }
+
+    public function sentMessages()
+    {
+        return $this->hasMany(Message::class, 'sender_id');
+    }
+
+    public function receivedMessages()
+    {
+        return $this->hasMany(Message::class, 'receiver_id');
+    }
+
+    /**
+     * 未読メッセージ数を取得
+     */
+    public function getUnreadMessageCount()
+    {
+        return $this->receivedMessages()->where('is_read', false)->count();
+    }
+
+    /**
+     * 特定の商品に関する未読メッセージ数を取得
+     */
+    public function getUnreadMessageCountForItem($itemId)
+    {
+        return $this->receivedMessages()
+            ->where('item_id', $itemId)
+            ->where('is_read', false)
+            ->count();
+    }
+
+    /**
+     * 取引中の商品に関する未読メッセージ数を取得
+     */
+    public function getUnreadMessageCountForPurchasedItems()
+    {
+        $purchasedItemIds = SoldItem::where('user_id', $this->id)->pluck('item_id');
+
+        return $this->receivedMessages()
+            ->whereIn('item_id', $purchasedItemIds)
+            ->where('is_read', false)
+            ->count();
+    }
+
+    /**
+     * このユーザーが行った評価
+     */
+    public function givenRatings()
+    {
+        return $this->hasMany(Rating::class, 'rater_id');
+    }
+
+    /**
+     * このユーザーが受けた評価
+     */
+    public function receivedRatings()
+    {
+        return $this->hasMany(Rating::class, 'rated_user_id');
+    }
+
+    /**
+     * 平均評価を取得
+     */
+    public function getAverageRating()
+    {
+        return $this->receivedRatings()->avg('rating');
+    }
+
+    /**
+     * 評価数を取得
+     */
+    public function getRatingCount()
+    {
+        return $this->receivedRatings()->count();
+    }
 }

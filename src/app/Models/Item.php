@@ -82,4 +82,9 @@ class Item extends Model
         return $this->user_id == Auth::id();
     }
 
+    public function soldItem()
+    {
+        return $this->hasOne('App\Models\SoldItem');
+    }
+
 }

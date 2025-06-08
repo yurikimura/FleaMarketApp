@@ -28,6 +28,9 @@ class PurchaseController extends Controller
                 'user_id' => Auth::id(),
                 'item_id' => $item_id
             ]);
+
+            // 購入後はチャット画面にリダイレクト
+            return redirect()->route('chat.show', $item_id)->with('success', '商品を購入しました。出品者とのやり取りを開始できます。');
         }
         return redirect('/');
     }

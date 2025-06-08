@@ -1,0 +1,545 @@
+<?php
+
+namespace Tests\Feature;
+
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\WithFaker;
+use Tests\TestCase;
+use App\Models\User;
+use App\Models\Item;
+use App\Models\SoldItem;
+use App\Models\Condition;
+use App\Models\Profile;
+use App\Models\Message;
+use Illuminate\Support\Facades\Storage;
+
+class MypageTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Storage::fake('local');
+    }
+
+    /**
+     * マイページにアクセスできることをテスト
+     */
+    public function test_user_can_access_mypage()
+    {
+        // ユーザーを作成
+        $user = User::factory()->create();
+
+        // ログイン状態でマイページにアクセス
+        $response = $this->actingAs($user)->get('/mypage');
+
+        $response->assertStatus(200);
+        $response->assertViewIs('mypage');
+        $response->assertViewHas('user');
+        $response->assertViewHas('items');
+        $response->assertViewHas('unreadMessageCount');
+        $response->assertViewHas('unreadMessageCountForPurchasedItems');
+    }
+
+    /**
+     * マイページで出品した商品が表示されることをテスト
+     */
+    public function test_user_can_view_their_listed_items()
+    {
+        // ユーザーと商品状態を作成
+        $user = User::factory()->create();
+        $condition = Condition::factory()->create();
+
+        // ユーザーが出品した商品を作成
+        $item1 = Item::factory()->create([
+            'user_id' => $user->id,
+            'condition_id' => $condition->id,
+            'name' => '出品商品1'
+        ]);
+        $item2 = Item::factory()->create([
+            'user_id' => $user->id,
+            'condition_id' => $condition->id,
+            'name' => '出品商品2'
+        ]);
+
+        // 他のユーザーの商品も作成（表示されないことを確認するため）
+        $otherUser = User::factory()->create();
+        Item::factory()->create([
+            'user_id' => $otherUser->id,
+            'condition_id' => $condition->id,
+            'name' => '他人の商品'
+        ]);
+
+        // マイページにアクセス（デフォルトは出品した商品）
+        $response = $this->actingAs($user)->get('/mypage');
+
+        $response->assertStatus(200);
+        $response->assertSee('出品商品1');
+        $response->assertSee('出品商品2');
+        $response->assertDontSee('他人の商品');
+    }
+
+    /**
+     * マイページで購入した商品（取引中の商品）が表示されることをテスト
+     */
+    public function test_user_can_view_purchased_items()
+    {
+        // ユーザーと商品状態を作成
+        $buyer = User::factory()->create();
+        $seller = User::factory()->create();
+        $condition = Condition::factory()->create();
+
+        // 商品を作成
+        $item1 = Item::factory()->create([
+            'user_id' => $seller->id,
+            'condition_id' => $condition->id,
+            'name' => '購入商品1'
+        ]);
+        $item2 = Item::factory()->create([
+            'user_id' => $seller->id,
+            'condition_id' => $condition->id,
+            'name' => '購入商品2'
+        ]);
+
+        // 購入履歴を作成（取引中の商品として）
+        SoldItem::create([
+            'user_id' => $buyer->id,
+            'item_id' => $item1->id
+        ]);
+        SoldItem::create([
+            'user_id' => $buyer->id,
+            'item_id' => $item2->id
+        ]);
+
+        // 他のユーザーが購入した商品も作成（表示されないことを確認するため）
+        $otherBuyer = User::factory()->create();
+        $item3 = Item::factory()->create([
+            'user_id' => $seller->id,
+            'condition_id' => $condition->id,
+            'name' => '他人が購入した商品'
+        ]);
+        SoldItem::create([
+            'user_id' => $otherBuyer->id,
+            'item_id' => $item3->id
+        ]);
+
+        // マイページの購入した商品タブにアクセス
+        $response = $this->actingAs($buyer)->get('/mypage?page=buy');
+
+        $response->assertStatus(200);
+        $response->assertSee('購入商品1');
+        $response->assertSee('購入商品2');
+        $response->assertDontSee('他人が購入した商品');
+    }
+
+    /**
+     * 購入した商品がない場合のテスト
+     */
+    public function test_user_with_no_purchased_items()
+    {
+        // ユーザーを作成
+        $user = User::factory()->create();
+
+        // マイページの購入した商品タブにアクセス
+        $response = $this->actingAs($user)->get('/mypage?page=buy');
+
+        $response->assertStatus(200);
+        // 商品が表示されないことを確認（空の状態）
+        $response->assertViewHas('items');
+        $items = $response->viewData('items');
+        $this->assertCount(0, $items);
+    }
+
+    /**
+     * マイページのタブ切り替えが正しく動作することをテスト
+     */
+    public function test_mypage_tab_switching()
+    {
+        // ユーザーと商品状態を作成
+        $user = User::factory()->create();
+        $condition = Condition::factory()->create();
+
+        // 出品した商品を作成
+        $listedItem = Item::factory()->create([
+            'user_id' => $user->id,
+            'condition_id' => $condition->id,
+            'name' => '出品商品'
+        ]);
+
+        // 購入した商品を作成
+        $seller = User::factory()->create();
+        $purchasedItem = Item::factory()->create([
+            'user_id' => $seller->id,
+            'condition_id' => $condition->id,
+            'name' => '購入商品'
+        ]);
+        SoldItem::create([
+            'user_id' => $user->id,
+            'item_id' => $purchasedItem->id
+        ]);
+
+        // 出品した商品タブ（デフォルト）
+        $response = $this->actingAs($user)->get('/mypage');
+        $response->assertStatus(200);
+        $response->assertSee('出品商品');
+        $response->assertDontSee('購入商品');
+
+        // 購入した商品タブ
+        $response = $this->actingAs($user)->get('/mypage?page=buy');
+        $response->assertStatus(200);
+        $response->assertSee('購入商品');
+        $response->assertDontSee('出品商品');
+    }
+
+    /**
+     * 未認証ユーザーがマイページにアクセスできないことをテスト
+     */
+    public function test_unauthenticated_user_cannot_access_mypage()
+    {
+        // 未認証状態でマイページにアクセス
+        $response = $this->get('/mypage');
+
+        // ログインページにリダイレクトされることを確認
+        $response->assertRedirect('/login');
+    }
+
+    /**
+     * マイページに必要な要素が表示されることをテスト
+     */
+    public function test_mypage_displays_required_elements()
+    {
+        // ユーザーとプロフィールを作成
+        $user = User::factory()->create(['name' => 'テストユーザー']);
+        Profile::factory()->create(['user_id' => $user->id]);
+
+        // マイページにアクセス
+        $response = $this->actingAs($user)->get('/mypage');
+
+        $response->assertStatus(200);
+        // ユーザー名が表示されることを確認
+        $response->assertSee('テストユーザー');
+        // プロフィール編集リンクが表示されることを確認
+        $response->assertSee('プロフィールを編集');
+        // タブが表示されることを確認
+        $response->assertSee('出品した商品');
+        $response->assertSee('購入した商品');
+    }
+
+    /**
+     * マイページで取引メッセージ数が確認できることをテスト
+     */
+    public function test_mypage_displays_message_counts()
+    {
+        // ユーザーを作成
+        $buyer = User::factory()->create();
+        $seller = User::factory()->create();
+        $condition = Condition::factory()->create();
+
+        // 購入した商品を作成
+        $purchasedItem = Item::factory()->create([
+            'user_id' => $seller->id,
+            'condition_id' => $condition->id,
+        ]);
+
+        // 購入履歴を作成
+        SoldItem::create([
+            'user_id' => $buyer->id,
+            'item_id' => $purchasedItem->id,
+        ]);
+
+        // 取引メッセージを作成
+        Message::factory()->unread()->create([
+            'sender_id' => $seller->id,
+            'receiver_id' => $buyer->id,
+            'item_id' => $purchasedItem->id,
+            'message' => '商品を発送しました',
+        ]);
+        Message::factory()->unread()->create([
+            'sender_id' => $seller->id,
+            'receiver_id' => $buyer->id,
+            'item_id' => $purchasedItem->id,
+            'message' => '配送状況をお知らせします',
+        ]);
+
+        // 他の商品に関するメッセージ（購入していない商品）
+        $otherItem = Item::factory()->create([
+            'user_id' => $seller->id,
+            'condition_id' => $condition->id,
+        ]);
+        Message::factory()->unread()->create([
+            'sender_id' => $seller->id,
+            'receiver_id' => $buyer->id,
+            'item_id' => $otherItem->id,
+            'message' => '他の商品について',
+        ]);
+
+        // マイページにアクセス
+        $response = $this->actingAs($buyer)->get('/mypage');
+
+        $response->assertStatus(200);
+        // 全体の未読メッセージ数が正しく表示されることを確認
+        $response->assertViewHas('unreadMessageCount', 3);
+        // 取引中の商品に関する未読メッセージ数が正しく表示されることを確認
+        $response->assertViewHas('unreadMessageCountForPurchasedItems', 2);
+    }
+
+    /**
+     * メッセージがない場合のテスト
+     */
+    public function test_mypage_shows_zero_message_count_when_no_messages()
+    {
+        // ユーザーを作成
+        $user = User::factory()->create();
+
+        // マイページにアクセス
+        $response = $this->actingAs($user)->get('/mypage');
+
+        $response->assertStatus(200);
+        // メッセージ数が0であることを確認
+        $response->assertViewHas('unreadMessageCount', 0);
+        $response->assertViewHas('unreadMessageCountForPurchasedItems', 0);
+    }
+
+    /**
+     * マイページの取引中の商品をクリックして取引チャット画面へ遷移できることをテスト
+     */
+    public function test_user_can_navigate_to_chat_from_purchased_items()
+    {
+        // ユーザーを作成
+        $buyer = User::factory()->create();
+        $seller = User::factory()->create();
+        $condition = Condition::factory()->create();
+
+        // 購入した商品を作成
+        $purchasedItem = Item::factory()->create([
+            'user_id' => $seller->id,
+            'condition_id' => $condition->id,
+            'name' => '取引中の商品',
+        ]);
+
+        // 購入履歴を作成
+        SoldItem::create([
+            'user_id' => $buyer->id,
+            'item_id' => $purchasedItem->id,
+        ]);
+
+        // マイページの購入した商品タブにアクセス
+        $response = $this->actingAs($buyer)->get('/mypage?page=buy');
+
+        $response->assertStatus(200);
+        // チャット画面へのリンクが存在することを確認
+        $response->assertSee("/chat/{$purchasedItem->id}");
+
+        // 実際にチャット画面にアクセスできることを確認
+        $chatResponse = $this->actingAs($buyer)->get("/chat/{$purchasedItem->id}");
+        $chatResponse->assertStatus(200);
+        $chatResponse->assertViewIs('chat');
+        $chatResponse->assertViewHas('item');
+        $chatResponse->assertViewHas('messages');
+        $chatResponse->assertViewHas('user');
+    }
+
+    /**
+     * 購入していない商品のチャット画面にアクセスできないことをテスト
+     */
+    public function test_user_cannot_access_chat_for_non_purchased_items()
+    {
+        // ユーザーを作成
+        $user = User::factory()->create();
+        $seller = User::factory()->create();
+        $condition = Condition::factory()->create();
+
+        // 他人の商品を作成（購入していない）
+        $item = Item::factory()->create([
+            'user_id' => $seller->id,
+            'condition_id' => $condition->id,
+        ]);
+
+        // チャット画面にアクセスを試行
+        $response = $this->actingAs($user)->get("/chat/{$item->id}");
+
+        // 403エラーが返されることを確認
+        $response->assertStatus(403);
+    }
+
+    /**
+     * 出品者が自分の商品のチャット画面にアクセスできることをテスト
+     */
+    public function test_seller_can_access_chat_for_their_sold_items()
+    {
+        // ユーザーを作成
+        $seller = User::factory()->create();
+        $buyer = User::factory()->create();
+        $condition = Condition::factory()->create();
+
+        // 出品者の商品を作成
+        $item = Item::factory()->create([
+            'user_id' => $seller->id,
+            'condition_id' => $condition->id,
+        ]);
+
+        // 購入履歴を作成
+        SoldItem::create([
+            'user_id' => $buyer->id,
+            'item_id' => $item->id,
+        ]);
+
+        // 出品者がチャット画面にアクセス
+        $response = $this->actingAs($seller)->get("/chat/{$item->id}");
+
+        $response->assertStatus(200);
+        $response->assertViewIs('chat');
+        $response->assertViewHas('item');
+        $response->assertViewHas('messages');
+        $response->assertViewHas('user');
+    }
+
+    /**
+     * チャット画面でメッセージが正しく表示されることをテスト
+     */
+    public function test_chat_displays_messages_correctly()
+    {
+        // ユーザーを作成
+        $buyer = User::factory()->create();
+        $seller = User::factory()->create();
+        $condition = Condition::factory()->create();
+
+        // 商品を作成
+        $item = Item::factory()->create([
+            'user_id' => $seller->id,
+            'condition_id' => $condition->id,
+        ]);
+
+        // 購入履歴を作成
+        SoldItem::create([
+            'user_id' => $buyer->id,
+            'item_id' => $item->id,
+        ]);
+
+        // メッセージを作成
+        $message1 = Message::factory()->create([
+            'sender_id' => $buyer->id,
+            'receiver_id' => $seller->id,
+            'item_id' => $item->id,
+            'message' => '商品について質問があります',
+            'is_read' => false,
+        ]);
+
+        $message2 = Message::factory()->create([
+            'sender_id' => $seller->id,
+            'receiver_id' => $buyer->id,
+            'item_id' => $item->id,
+            'message' => 'お答えします',
+            'is_read' => false,
+        ]);
+
+        // 購入者がチャット画面にアクセス
+        $response = $this->actingAs($buyer)->get("/chat/{$item->id}");
+
+        $response->assertStatus(200);
+        $response->assertSee('商品について質問があります');
+        $response->assertSee('お答えします');
+
+        // 購入者が受信したメッセージが既読になることを確認
+        $message2->refresh();
+        $this->assertTrue($message2->is_read);
+    }
+
+    /**
+     * チャット画面からメッセージを送信できることをテスト
+     */
+    public function test_user_can_send_message_from_chat()
+    {
+        // ユーザーを作成
+        $buyer = User::factory()->create();
+        $seller = User::factory()->create();
+        $condition = Condition::factory()->create();
+
+        // 商品を作成
+        $item = Item::factory()->create([
+            'user_id' => $seller->id,
+            'condition_id' => $condition->id,
+        ]);
+
+        // 購入履歴を作成
+        SoldItem::create([
+            'user_id' => $buyer->id,
+            'item_id' => $item->id,
+        ]);
+
+        // メッセージを送信
+        $response = $this->actingAs($buyer)->post("/chat/{$item->id}", [
+            'message' => 'こんにちは、商品の状態はいかがですか？'
+        ]);
+
+        // チャット画面にリダイレクトされることを確認
+        $response->assertRedirect("/chat/{$item->id}");
+
+        // メッセージがデータベースに保存されることを確認
+        $this->assertDatabaseHas('messages', [
+            'sender_id' => $buyer->id,
+            'receiver_id' => $seller->id,
+            'item_id' => $item->id,
+            'message' => 'こんにちは、商品の状態はいかがですか？',
+            'is_read' => false,
+        ]);
+    }
+
+    /**
+     * 空のメッセージを送信できないことをテスト
+     */
+    public function test_user_cannot_send_empty_message()
+    {
+        // ユーザーを作成
+        $buyer = User::factory()->create();
+        $seller = User::factory()->create();
+        $condition = Condition::factory()->create();
+
+        // 商品を作成
+        $item = Item::factory()->create([
+            'user_id' => $seller->id,
+            'condition_id' => $condition->id,
+        ]);
+
+        // 購入履歴を作成
+        SoldItem::create([
+            'user_id' => $buyer->id,
+            'item_id' => $item->id,
+        ]);
+
+        // 空のメッセージを送信
+        $response = $this->actingAs($buyer)->post("/chat/{$item->id}", [
+            'message' => ''
+        ]);
+
+        // バリデーションエラーが発生することを確認
+        $response->assertSessionHasErrors('message');
+    }
+
+    /**
+     * マイページの出品した商品は商品詳細画面へのリンクであることをテスト
+     */
+    public function test_listed_items_link_to_item_detail()
+    {
+        // ユーザーと商品状態を作成
+        $user = User::factory()->create();
+        $condition = Condition::factory()->create();
+
+        // ユーザーが出品した商品を作成
+        $item = Item::factory()->create([
+            'user_id' => $user->id,
+            'condition_id' => $condition->id,
+            'name' => '出品商品'
+        ]);
+
+        // マイページにアクセス（デフォルトは出品した商品）
+        $response = $this->actingAs($user)->get('/mypage');
+
+        $response->assertStatus(200);
+        // 商品詳細画面へのリンクが存在することを確認
+        $response->assertSee("/item/{$item->id}");
+        // チャット画面へのリンクは存在しないことを確認
+        $response->assertDontSee("/chat/{$item->id}");
+    }
+}

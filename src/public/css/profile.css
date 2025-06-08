@@ -14,3 +14,55 @@
     border-radius: 50%;
     background-color: #d9d9d9;
 }
+
+/* 評価表示のスタイル */
+.rating-section {
+    margin-bottom: 30px;
+}
+
+.rating-display {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.rating-stars {
+    display: flex;
+    gap: 2px;
+}
+
+.star {
+    font-size: 20px;
+    color: #ddd;
+}
+
+.star.filled {
+    color: #ffd700;
+}
+
+.star.half {
+    color: #ffd700;
+}
+
+.rating-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.rating-average {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+}
+
+.rating-count {
+    font-size: 14px;
+    color: #666;
+}
+
+.no-rating .rating-text {
+    font-size: 14px;
+    color: #999;
+}

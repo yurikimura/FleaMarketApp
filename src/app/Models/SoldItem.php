@@ -15,7 +15,8 @@ class SoldItem extends Model
 
     protected $fillable = [
         'user_id',
-        'item_id'
+        'item_id',
+        'is_completed'
     ];
 
     public function user()

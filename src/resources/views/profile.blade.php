@@ -38,6 +38,40 @@
         @enderror
     </div>
 
+    <!-- 平均評価表示セクション -->
+    <div class="rating-section">
+        <label class="entry__name">取引評価</label>
+        <div class="rating-display">
+            @if(Auth::user()->getRatingCount() > 0)
+                <div class="rating-stars">
+                    @php
+                        $averageRating = Auth::user()->getAverageRating();
+                        $fullStars = floor($averageRating);
+                        $hasHalfStar = ($averageRating - $fullStars) >= 0.5;
+                    @endphp
+
+                    @for($i = 1; $i <= 5; $i++)
+                        @if($i <= $fullStars)
+                            <span class="star filled">★</span>
+                        @elseif($i == $fullStars + 1 && $hasHalfStar)
+                            <span class="star half">☆</span>
+                        @else
+                            <span class="star empty">☆</span>
+                        @endif
+                    @endfor
+                </div>
+                <div class="rating-info">
+                    <span class="rating-average">{{ number_format(Auth::user()->getAverageRating(), 1) }}</span>
+                    <span class="rating-count">({{ Auth::user()->getRatingCount() }}件の評価)</span>
+                </div>
+            @else
+                <div class="no-rating">
+                    <span class="rating-text">まだ評価がありません</span>
+                </div>
+            @endif
+        </div>
+    </div>
+
     <label for="postcode" class="entry__name">郵便番号</label>
     <input name="postcode" id="postcode" type="text" class="input" value="{{ $profile ? $profile->postcode : '' }}" size="10" maxlength="8" onKeyUp="AjaxZip3.zip2addr(this,'','address','address');">
     <div class="form__error">
