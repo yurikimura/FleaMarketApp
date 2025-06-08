@@ -294,6 +294,11 @@ class UserController extends Controller
             abort(403, 'この取引にメッセージを送信する権限がありません。');
         }
 
+        // 取引完了後はメッセージ送信を禁止
+        if ($soldItem && $soldItem->is_completed) {
+            return redirect()->route('chat.show', $itemId)->with('error', '取引完了後はメッセージを送信できません。');
+        }
+
         // 受信者を決定（購入者なら出品者に、出品者なら購入者に）
         if ($soldItem) {
             // 購入者の場合、出品者に送信

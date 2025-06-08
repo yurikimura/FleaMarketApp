@@ -550,6 +550,72 @@
     background-color: #218838;
 }
 
+/* 取引完了後のメッセージエリア */
+.transaction-completed-message {
+    text-align: center;
+    padding: 30px 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 2px solid #28a745;
+}
+
+.transaction-completed-message p {
+    margin: 0 0 20px 0;
+    color: #333;
+    font-size: 16px;
+}
+
+.transaction-completed-message p:first-child {
+    font-weight: bold;
+    color: #28a745;
+    font-size: 18px;
+}
+
+.rating-stars {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.rating-stars .star {
+    font-size: 40px;
+    color: #ddd;
+    cursor: pointer;
+    transition: color 0.2s ease, transform 0.1s ease;
+}
+
+.rating-stars .star:hover {
+    color: #ffd700;
+    transform: scale(1.1);
+}
+
+.rating-stars .star.selected {
+    color: #ffd700;
+}
+
+.btn-rating {
+    background-color: #ff6b35;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 25px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    margin-top: 10px;
+}
+
+.btn-rating:hover {
+    background-color: #e55a2b;
+    transform: translateY(-2px);
+}
+
+.btn-rating:active {
+    transform: translateY(0);
+}
+
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
     .chat-layout {

@@ -153,18 +153,62 @@
             </div>
 
             <!-- メッセージ入力フォーム -->
+            @php
+                $soldItem = $item->soldItem;
+                $isCompleted = $soldItem && $soldItem->is_completed;
+
+                // 評価済みかチェック
+                $hasRated = false;
+                if ($isCompleted) {
+                    $partnerId = null;
+                    if ($soldItem && $soldItem->user_id === $user->id) {
+                        // 購入者の場合、出品者を評価対象とする
+                        $partnerId = $item->user_id;
+                    } elseif ($item->user_id === $user->id) {
+                        // 出品者の場合、購入者を評価対象とする
+                        $partnerId = $soldItem->user_id;
+                    }
+
+                    if ($partnerId) {
+                        $hasRated = \App\Models\Rating::where('rater_id', $user->id)
+                                                     ->where('rated_user_id', $partnerId)
+                                                     ->where('item_id', $item->id)
+                                                     ->exists();
+                    }
+                }
+            @endphp
+
             <div class="chat__input">
-                <form action="{{ route('chat.message.send', $item->id) }}" method="POST" class="message-form">
-                    @csrf
-                    <div class="input-container">
-                        <textarea name="message" placeholder="メッセージを入力してください" class="message-input" required></textarea>
-                        <button type="submit" class="btn-send">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M2 21L23 12L2 3V10L17 12L2 14V21Z" fill="currentColor"/>
-                            </svg>
-                        </button>
+                @if($isCompleted)
+                    <!-- 取引完了後のメッセージ -->
+                    <div class="transaction-completed-message">
+                        <p>取引が完了しました。</p>
+                        @if(!$hasRated)
+                            <p>今回の取引相手はどうでしたか？</p>
+                            <div class="rating-stars">
+                                <span class="star" data-rating="1">★</span>
+                                <span class="star" data-rating="2">★</span>
+                                <span class="star" data-rating="3">★</span>
+                                <span class="star" data-rating="4">★</span>
+                                <span class="star" data-rating="5">★</span>
+                            </div>
+                            <button type="button" class="btn-rating" onclick="openRatingModal()">送信する</button>
+                        @endif
                     </div>
-                </form>
+                @else
+                    <!-- 通常のメッセージ入力フォーム -->
+                    <form action="{{ route('chat.message.send', $item->id) }}" method="POST" class="message-form">
+                        @csrf
+                        <div class="input-container">
+                            <textarea name="message" placeholder="メッセージを入力してください" class="message-input" required></textarea>
+                            <button type="submit" class="btn-send">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M2 21L23 12L2 3V10L17 12L2 14V21Z" fill="currentColor"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </form>
+                @endif
             </div>
         </div>
     </div>
@@ -178,14 +222,23 @@
             <span class="close" onclick="closeRatingModal()">&times;</span>
         </div>
         <div class="modal-body">
-            <p>取引相手を評価してください</p>
+            <p>今回の取引相手はどうでしたか？</p>
             <form id="ratingForm">
                 @csrf
                 <input type="hidden" name="item_id" value="{{ $item->id }}">
+                @php
+                    $partnerId = null;
+                    if ($soldItem && $soldItem->user_id === $user->id) {
+                        // 購入者の場合、出品者を評価対象とする
+                        $partnerId = $item->user_id;
+                    } elseif ($item->user_id === $user->id) {
+                        // 出品者の場合、購入者を評価対象とする
+                        $partnerId = $soldItem->user_id;
+                    }
+                @endphp
                 <input type="hidden" name="rated_user_id" value="{{ $partnerId }}">
 
                 <div class="rating-input">
-                    <label>評価:</label>
                     <div class="star-rating">
                         <input type="radio" name="rating" value="5" id="star5" required>
                         <label for="star5" class="star">★</label>
@@ -199,13 +252,9 @@
                         <label for="star1" class="star">★</label>
                     </div>
                 </div>
-                <div class="comment-input">
-                    <label for="comment">コメント:</label>
-                    <textarea name="comment" id="comment" placeholder="取引の感想をお聞かせください（任意）" rows="4"></textarea>
-                </div>
                 <div class="modal-actions">
                     <button type="button" class="btn-cancel" onclick="closeRatingModal()">キャンセル</button>
-                    <button type="submit" class="btn-submit">評価を送信</button>
+                    <button type="submit" class="btn-submit">送信する</button>
                 </div>
             </form>
         </div>
@@ -215,28 +264,27 @@
 <script>
 // 取引完了処理
 function completeTransaction() {
-    if (confirm('取引を完了しますか？')) {
-        fetch(`/transaction/{{ $item->id }}/complete`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.success);
-                location.reload();
-            } else {
-                alert(data.error || '取引完了に失敗しました');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('取引完了に失敗しました');
-        });
-    }
+    // 確認ダイアログを削除し、すぐに取引完了処理を実行
+    fetch(`/transaction/{{ $item->id }}/complete`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 取引完了後、すぐに評価モーダルを表示
+            openRatingModal();
+        } else {
+            alert(data.error || '取引完了に失敗しました');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('取引完了に失敗しました');
+    });
 }
 
 // 評価モーダル
@@ -256,7 +304,27 @@ window.onclick = function(event) {
     }
 }
 
-// 星評価の処理
+// 星評価の処理（取引完了メッセージ内の星）
+document.querySelectorAll('.rating-stars .star').forEach((star, index) => {
+    star.addEventListener('click', function() {
+        const rating = this.getAttribute('data-rating');
+
+        // 全ての星をリセット
+        document.querySelectorAll('.rating-stars .star').forEach(s => {
+            s.classList.remove('selected');
+        });
+
+        // クリックした星まで選択状態にする
+        for (let i = 0; i < rating; i++) {
+            document.querySelectorAll('.rating-stars .star')[i].classList.add('selected');
+        }
+
+        // モーダル内の対応するラジオボタンを選択
+        document.getElementById(`star${rating}`).checked = true;
+    });
+});
+
+// モーダル内の星評価の処理
 document.querySelectorAll('.star-rating input').forEach(input => {
     input.addEventListener('change', function() {
         const rating = this.value;
@@ -268,6 +336,14 @@ document.querySelectorAll('.star-rating input').forEach(input => {
                 star.classList.remove('selected');
             }
         });
+
+        // 取引完了メッセージ内の星も同期
+        document.querySelectorAll('.rating-stars .star').forEach(s => {
+            s.classList.remove('selected');
+        });
+        for (let i = 0; i < rating; i++) {
+            document.querySelectorAll('.rating-stars .star')[i].classList.add('selected');
+        }
     });
 });
 
@@ -291,12 +367,8 @@ document.getElementById('ratingForm').addEventListener('submit', function(e) {
         if (data.success) {
             alert(data.success);
             closeRatingModal();
-            // 商品一覧に遷移
-            if (data.redirect_url) {
-                window.location.href = data.redirect_url;
-            } else {
-                window.location.href = '/';
-            }
+            // 評価完了後にページをリロードして取引完了状態を反映
+            location.reload();
         } else {
             alert(data.error || '評価の送信に失敗しました');
         }
