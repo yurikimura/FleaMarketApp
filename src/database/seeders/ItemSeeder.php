@@ -16,20 +16,10 @@ class ItemSeeder extends Seeder
     {
         DB::table('items')->insert([
             [
-                'name' => 'dummydata1',
-                'price' => 3000,
-                'description' => 'dummy dummy dummy',
-                'img_url' => 'public/img/dummyItem.png',
-                'user_id' => 1,
-                'condition_id' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
                 'name' => '腕時計',
                 'price' => 15000,
                 'description' => 'スタイリッシュなデザインのメンズ腕時計',
-                'img_url' => 'public/img/watch.jpg',
+                'img_url' => '../../public/img/watch.jpg',
                 'user_id' => 1,
                 'condition_id' => 1,
                 'created_at' => now(),
@@ -39,7 +29,7 @@ class ItemSeeder extends Seeder
                 'name' => 'HDD',
                 'price' => 5000,
                 'description' => '高速で信頼性の高いハードディスク',
-                'img_url' => 'public/img/hdd.jpg',
+                'img_url' => '../public/img/hdd.jpg',
                 'user_id' => 1,
                 'condition_id' => 2,
                 'created_at' => now(),
