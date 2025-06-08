@@ -63,7 +63,10 @@ class UserController extends Controller
         $user = User::find(Auth::id());
 
         if ($request->page == 'buy'){
-            $items = SoldItem::where('user_id', $user->id)->get()->map(function ($sold_item) {
+            // 購入した商品：取引完了済みの商品のみ表示
+            $items = SoldItem::where('user_id', $user->id)
+                           ->where('is_completed', true) // 取引完了済みのみ
+                           ->get()->map(function ($sold_item) {
                 return $sold_item->item;
             });
         } elseif ($request->page == 'trading') {

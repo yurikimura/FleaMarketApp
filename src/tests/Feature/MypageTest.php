@@ -81,7 +81,7 @@ class MypageTest extends TestCase
     }
 
     /**
-     * マイページで購入した商品（取引中の商品）が表示されることをテスト
+     * マイページで購入した商品（取引完了済みの商品）が表示されることをテスト
      */
     public function test_user_can_view_purchased_items()
     {
@@ -91,25 +91,39 @@ class MypageTest extends TestCase
         $condition = Condition::factory()->create();
 
         // 商品を作成
-        $item1 = Item::factory()->create([
+        $completedItem1 = Item::factory()->create([
             'user_id' => $seller->id,
             'condition_id' => $condition->id,
-            'name' => '購入商品1'
+            'name' => '取引完了済み商品1'
         ]);
-        $item2 = Item::factory()->create([
+        $completedItem2 = Item::factory()->create([
             'user_id' => $seller->id,
             'condition_id' => $condition->id,
-            'name' => '購入商品2'
+            'name' => '取引完了済み商品2'
+        ]);
+        $tradingItem = Item::factory()->create([
+            'user_id' => $seller->id,
+            'condition_id' => $condition->id,
+            'name' => '未完了取引商品'
         ]);
 
-        // 購入履歴を作成（取引中の商品として）
+        // 購入履歴を作成（取引完了済み）
         SoldItem::create([
             'user_id' => $buyer->id,
-            'item_id' => $item1->id
+            'item_id' => $completedItem1->id,
+            'is_completed' => true
         ]);
         SoldItem::create([
             'user_id' => $buyer->id,
-            'item_id' => $item2->id
+            'item_id' => $completedItem2->id,
+            'is_completed' => true
+        ]);
+
+        // 購入履歴を作成（取引未完了）
+        SoldItem::create([
+            'user_id' => $buyer->id,
+            'item_id' => $tradingItem->id,
+            'is_completed' => false
         ]);
 
         // 他のユーザーが購入した商品も作成（表示されないことを確認するため）
@@ -121,15 +135,20 @@ class MypageTest extends TestCase
         ]);
         SoldItem::create([
             'user_id' => $otherBuyer->id,
-            'item_id' => $item3->id
+            'item_id' => $item3->id,
+            'is_completed' => true
         ]);
 
         // マイページの購入した商品タブにアクセス
         $response = $this->actingAs($buyer)->get('/mypage?page=buy');
 
         $response->assertStatus(200);
-        $response->assertSee('購入商品1');
-        $response->assertSee('購入商品2');
+        // 取引完了済みの商品のみ表示される
+        $response->assertSee('取引完了済み商品1');
+        $response->assertSee('取引完了済み商品2');
+        // 取引中の商品は表示されない（商品名で確認）
+        $response->assertDontSee('未完了取引商品');
+        // 他人の商品は表示されない
         $response->assertDontSee('他人が購入した商品');
     }
 
@@ -140,15 +159,32 @@ class MypageTest extends TestCase
     {
         // ユーザーを作成
         $user = User::factory()->create();
+        $seller = User::factory()->create();
+        $condition = Condition::factory()->create();
+
+        // 取引未完了の商品を作成（購入した商品タブには表示されない）
+        $tradingItem = Item::factory()->create([
+            'user_id' => $seller->id,
+            'condition_id' => $condition->id,
+            'name' => '未完了取引商品'
+        ]);
+
+        SoldItem::create([
+            'user_id' => $user->id,
+            'item_id' => $tradingItem->id,
+            'is_completed' => false
+        ]);
 
         // マイページの購入した商品タブにアクセス
         $response = $this->actingAs($user)->get('/mypage?page=buy');
 
         $response->assertStatus(200);
-        // 商品が表示されないことを確認（空の状態）
+        // 取引完了済みの商品がないため、商品が表示されないことを確認
         $response->assertViewHas('items');
         $items = $response->viewData('items');
         $this->assertCount(0, $items);
+        // 取引中の商品は表示されない
+        $response->assertDontSee('未完了取引商品');
     }
 
     /**
@@ -167,29 +203,51 @@ class MypageTest extends TestCase
             'name' => '出品商品'
         ]);
 
-        // 購入した商品を作成
+        // 購入した商品を作成（取引完了済み）
         $seller = User::factory()->create();
         $purchasedItem = Item::factory()->create([
             'user_id' => $seller->id,
             'condition_id' => $condition->id,
-            'name' => '購入商品'
+            'name' => '購入商品（完了済み）'
         ]);
         SoldItem::create([
             'user_id' => $user->id,
-            'item_id' => $purchasedItem->id
+            'item_id' => $purchasedItem->id,
+            'is_completed' => true
+        ]);
+
+        // 取引中の商品を作成
+        $tradingItem = Item::factory()->create([
+            'user_id' => $seller->id,
+            'condition_id' => $condition->id,
+            'name' => '未完了取引商品'
+        ]);
+        SoldItem::create([
+            'user_id' => $user->id,
+            'item_id' => $tradingItem->id,
+            'is_completed' => false
         ]);
 
         // 出品した商品タブ（デフォルト）
         $response = $this->actingAs($user)->get('/mypage');
         $response->assertStatus(200);
         $response->assertSee('出品商品');
-        $response->assertDontSee('購入商品');
+        $response->assertDontSee('購入商品（完了済み）');
+        $response->assertDontSee('未完了取引商品');
 
-        // 購入した商品タブ
+        // 購入した商品タブ（取引完了済みのみ）
         $response = $this->actingAs($user)->get('/mypage?page=buy');
         $response->assertStatus(200);
-        $response->assertSee('購入商品');
+        $response->assertSee('購入商品（完了済み）');
         $response->assertDontSee('出品商品');
+        $response->assertDontSee('未完了取引商品');
+
+        // 取引中の商品タブ
+        $response = $this->actingAs($user)->get('/mypage?page=trading');
+        $response->assertStatus(200);
+        $response->assertSee('未完了取引商品');
+        $response->assertDontSee('出品商品');
+        $response->assertDontSee('購入商品（完了済み）');
     }
 
     /**
@@ -302,7 +360,7 @@ class MypageTest extends TestCase
     }
 
     /**
-     * マイページの取引中の商品をクリックして取引チャット画面へ遷移できることをテスト
+     * マイページの購入した商品をクリックして取引チャット画面へ遷移できることをテスト
      */
     public function test_user_can_navigate_to_chat_from_purchased_items()
     {
@@ -311,17 +369,18 @@ class MypageTest extends TestCase
         $seller = User::factory()->create();
         $condition = Condition::factory()->create();
 
-        // 購入した商品を作成
+        // 購入した商品を作成（取引完了済み）
         $purchasedItem = Item::factory()->create([
             'user_id' => $seller->id,
             'condition_id' => $condition->id,
-            'name' => '取引中の商品',
+            'name' => '取引完了済みの商品',
         ]);
 
-        // 購入履歴を作成
+        // 購入履歴を作成（取引完了済み）
         SoldItem::create([
             'user_id' => $buyer->id,
             'item_id' => $purchasedItem->id,
+            'is_completed' => true
         ]);
 
         // マイページの購入した商品タブにアクセス
@@ -670,7 +729,7 @@ class MypageTest extends TestCase
         $item = Item::factory()->create([
             'user_id' => $seller->id,
             'condition_id' => $condition->id,
-            'name' => '取引中商品'
+            'name' => '未完了取引商品'
         ]);
 
         // 購入履歴を作成（取引未完了）
@@ -687,4 +746,158 @@ class MypageTest extends TestCase
         // チャット画面へのリンクが存在することを確認
         $response->assertSee("/chat/{$item->id}");
     }
+
+    /**
+     * 出品者側でも取引中の商品に未読メッセージ数が表示されることをテスト
+     */
+    public function test_seller_can_see_unread_message_count_on_trading_items()
+    {
+        // ユーザーと商品状態を作成
+        $seller = User::factory()->create();
+        $buyer = User::factory()->create();
+        $condition = Condition::factory()->create();
+
+        // 出品者の商品を作成
+        $item = Item::factory()->create([
+            'user_id' => $seller->id,
+            'condition_id' => $condition->id,
+            'name' => '出品者の取引中商品'
+        ]);
+
+        // 購入履歴を作成（取引未完了）
+        SoldItem::create([
+            'user_id' => $buyer->id,
+            'item_id' => $item->id,
+            'is_completed' => false
+        ]);
+
+        // 購入者から出品者への未読メッセージを作成
+        Message::factory()->unread()->create([
+            'sender_id' => $buyer->id,
+            'receiver_id' => $seller->id,
+            'item_id' => $item->id,
+            'message' => '商品について質問があります',
+        ]);
+
+        Message::factory()->unread()->create([
+            'sender_id' => $buyer->id,
+            'receiver_id' => $seller->id,
+            'item_id' => $item->id,
+            'message' => '追加の質問です',
+        ]);
+
+        // 出品者のマイページの取引中の商品タブにアクセス
+        $response = $this->actingAs($seller)->get('/mypage?page=trading');
+
+        $response->assertStatus(200);
+        $response->assertSee('出品者の取引中商品');
+
+        // 未読メッセージ数が2件表示されることを確認
+        $response->assertSee('notification-badge');
+        $response->assertSee('2');
+    }
+
+    /**
+     * 購入者側でも取引中の商品に未読メッセージ数が表示されることをテスト
+     */
+    public function test_buyer_can_see_unread_message_count_on_trading_items()
+    {
+        // ユーザーと商品状態を作成
+        $buyer = User::factory()->create();
+        $seller = User::factory()->create();
+        $condition = Condition::factory()->create();
+
+        // 商品を作成
+        $item = Item::factory()->create([
+            'user_id' => $seller->id,
+            'condition_id' => $condition->id,
+            'name' => '購入者の取引中商品'
+        ]);
+
+        // 購入履歴を作成（取引未完了）
+        SoldItem::create([
+            'user_id' => $buyer->id,
+            'item_id' => $item->id,
+            'is_completed' => false
+        ]);
+
+        // 出品者から購入者への未読メッセージを作成
+        Message::factory()->unread()->create([
+            'sender_id' => $seller->id,
+            'receiver_id' => $buyer->id,
+            'item_id' => $item->id,
+            'message' => '商品を発送しました',
+        ]);
+
+        Message::factory()->unread()->create([
+            'sender_id' => $seller->id,
+            'receiver_id' => $buyer->id,
+            'item_id' => $item->id,
+            'message' => '配送状況をお知らせします',
+        ]);
+
+        Message::factory()->unread()->create([
+            'sender_id' => $seller->id,
+            'receiver_id' => $buyer->id,
+            'item_id' => $item->id,
+            'message' => '到着予定日について',
+        ]);
+
+        // 購入者のマイページの取引中の商品タブにアクセス
+        $response = $this->actingAs($buyer)->get('/mypage?page=trading');
+
+        $response->assertStatus(200);
+        $response->assertSee('購入者の取引中商品');
+
+        // 未読メッセージ数が3件表示されることを確認
+        $response->assertSee('notification-badge');
+        $response->assertSee('3');
+    }
+
+    /**
+     * 取引完了前後で商品の表示タブが変わることをテスト
+     */
+    public function test_item_moves_from_trading_to_purchased_after_completion()
+    {
+        // ユーザーと商品状態を作成
+        $buyer = User::factory()->create();
+        $seller = User::factory()->create();
+        $condition = Condition::factory()->create();
+
+        // 商品を作成
+        $item = Item::factory()->create([
+            'user_id' => $seller->id,
+            'condition_id' => $condition->id,
+            'name' => '取引テスト商品'
+        ]);
+
+        // 購入履歴を作成（取引未完了）
+        $soldItem = SoldItem::create([
+            'user_id' => $buyer->id,
+            'item_id' => $item->id,
+            'is_completed' => false
+        ]);
+
+        // 取引完了前：取引中の商品タブに表示され、購入した商品タブには表示されない
+        $tradingResponse = $this->actingAs($buyer)->get('/mypage?page=trading');
+        $tradingResponse->assertStatus(200);
+        $tradingResponse->assertSee('取引テスト商品');
+
+        $purchasedResponse = $this->actingAs($buyer)->get('/mypage?page=buy');
+        $purchasedResponse->assertStatus(200);
+        $purchasedResponse->assertDontSee('取引テスト商品');
+
+        // 取引を完了させる
+        $soldItem->update(['is_completed' => true]);
+
+        // 取引完了後：購入した商品タブに表示され、取引中の商品タブには表示されない
+        $tradingResponseAfter = $this->actingAs($buyer)->get('/mypage?page=trading');
+        $tradingResponseAfter->assertStatus(200);
+        $tradingResponseAfter->assertDontSee('取引テスト商品');
+
+        $purchasedResponseAfter = $this->actingAs($buyer)->get('/mypage?page=buy');
+        $purchasedResponseAfter->assertStatus(200);
+        $purchasedResponseAfter->assertSee('取引テスト商品');
+    }
 }
+

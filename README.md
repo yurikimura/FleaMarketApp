@@ -33,6 +33,11 @@ docker compose exec php php artisan db:seed --class=UserSeeder
 docker compose exec php php artisan db:seed --class=ItemSeeder
 ```
 
+#### テストを実行
+```
+docker compose exec php php artisan test
+```
+
 ### 停止
 ```
 docker compose down --remove-orphans
