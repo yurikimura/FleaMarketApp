@@ -33,6 +33,14 @@
         <ul class="border__list">
             <li><a href="/mypage?page=sell">出品した商品</a></li>
             <li><a href="/mypage?page=buy">購入した商品</a></li>
+            <li>
+                <a href="/mypage?page=trading">
+                    取引中の商品
+                    @if(isset($tradingItemsCount) && $tradingItemsCount > 0)
+                        <span class="tab-count">{{ $tradingItemsCount }}</span>
+                    @endif
+                </a>
+            </li>
         </ul>
     </div>
     <div class="items">
@@ -50,6 +58,19 @@
                             <img src="{{ \Storage::url($item->img_url) }}" alt="商品画像">
                         </div>
                     @endif
+                    <p class="item__name">{{$item->name}}</p>
+                </a>
+            @elseif(request()->get('page') == 'trading')
+                <!-- 取引中の商品の場合はチャット画面へのリンク -->
+                <a href="/chat/{{$item->id}}">
+                    <div class="item__img">
+                        <img src="{{ \Storage::url($item->img_url) }}" alt="商品画像">
+                        @if(isset($item->unread_count) && $item->unread_count > 0)
+                            <div class="notification-badge">
+                                {{ $item->unread_count > 9 ? '9+' : $item->unread_count }}
+                            </div>
+                        @endif
+                    </div>
                     <p class="item__name">{{$item->name}}</p>
                 </a>
             @else

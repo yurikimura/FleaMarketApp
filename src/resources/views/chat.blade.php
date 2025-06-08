@@ -70,7 +70,7 @@
             <!-- 取引相手の名前 -->
             @if($partner)
             <div class="chat__partner-info">
-                <h2 class="partner__name">{{ $partner->name }}</h2>
+                <h2 class="partner__name">「{{ $partner->name }}」さんとの取引</h2>
             </div>
             @endif
 

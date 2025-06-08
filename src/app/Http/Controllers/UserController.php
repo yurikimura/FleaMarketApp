@@ -61,19 +61,72 @@ class UserController extends Controller
 
     public function mypage(Request $request){
         $user = User::find(Auth::id());
+
         if ($request->page == 'buy'){
             $items = SoldItem::where('user_id', $user->id)->get()->map(function ($sold_item) {
                 return $sold_item->item;
             });
-        }else {
+        } elseif ($request->page == 'trading') {
+            // 取引中の商品：購入済みで取引完了していない商品
+
+            // 購入者として取引中の商品
+            $purchasedItems = SoldItem::where('user_id', $user->id)
+                            ->where('is_completed', false)
+                            ->with(['item.user'])
+                            ->get()
+                            ->map(function ($sold_item) use ($user) {
+                                $item = $sold_item->item;
+                                // 未読メッセージ数を取得
+                                $item->unread_count = Message::where('item_id', $item->id)
+                                                            ->where('receiver_id', $user->id)
+                                                            ->where('is_read', false)
+                                                            ->count();
+                                $item->transaction_type = 'purchased'; // 購入者として
+                                return $item;
+                            });
+
+            // 出品者として取引中の商品（自分が出品した商品で購入済みかつ取引完了していない）
+            $soldItems = Item::where('user_id', $user->id)
+                           ->whereHas('soldItem', function($query) {
+                               $query->where('is_completed', false);
+                           })
+                           ->with(['soldItem.user'])
+                           ->get()
+                           ->map(function ($item) use ($user) {
+                               // 未読メッセージ数を取得
+                               $item->unread_count = Message::where('item_id', $item->id)
+                                                           ->where('receiver_id', $user->id)
+                                                           ->where('is_read', false)
+                                                           ->count();
+                               $item->transaction_type = 'sold'; // 出品者として
+                               return $item;
+                           });
+
+            // 購入者と出品者の取引中商品を結合
+            $items = $purchasedItems->concat($soldItems);
+        } else {
             $items = Item::where('user_id', $user->id)->get();
         }
+
+        // 取引中の商品数を取得
+        $tradingItemsCount = SoldItem::where('user_id', $user->id)
+                                   ->where('is_completed', false)
+                                   ->count();
+
+        // 出品者として取引中の商品数も追加
+        $soldTradingItemsCount = Item::where('user_id', $user->id)
+                                   ->whereHas('soldItem', function($query) {
+                                       $query->where('is_completed', false);
+                                   })
+                                   ->count();
+
+        $tradingItemsCount += $soldTradingItemsCount;
 
         // 未読メッセージ数を取得
         $unreadMessageCount = $user->getUnreadMessageCount();
         $unreadMessageCountForPurchasedItems = $user->getUnreadMessageCountForPurchasedItems();
 
-        return view('mypage', compact('user', 'items', 'unreadMessageCount', 'unreadMessageCountForPurchasedItems'));
+        return view('mypage', compact('user', 'items', 'unreadMessageCount', 'unreadMessageCountForPurchasedItems', 'tradingItemsCount'));
     }
 
     /**
