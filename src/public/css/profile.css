@@ -29,20 +29,32 @@
 
 .rating-stars {
     display: flex;
-    gap: 2px;
+    gap: 4px;
 }
 
 .star {
-    font-size: 20px;
-    color: #ddd;
+    font-size: 24px;
+    color: #e0e0e0;
+    transition: all 0.3s ease;
+    cursor: default;
 }
 
 .star.filled {
-    color: #ffd700;
+    color: #ffcc00;
+    transform: scale(1.1);
 }
 
 .star.half {
-    color: #ffd700;
+    color: #ffcc00;
+    transform: scale(1.1);
+}
+
+.star.empty {
+    color: #e0e0e0;
+}
+
+.star:hover {
+    transform: scale(1.2);
 }
 
 .rating-info {

@@ -23,7 +23,37 @@
                         <img id="myImage" class="user__icon" src="{{ asset('img/icon.png') }}" alt="">
                     @endif
                 </div>
-                <p class="user__name">{{$user->name}}</p>
+                <div class="user__details">
+                    <p class="user__name">{{$user->name}}</p>
+                    <!-- 評価表示を追加 -->
+                    <div class="user__rating">
+                        @if($user->getRatingCount() > 0)
+                            <div class="rating-stars">
+                                @php
+                                    $averageRating = $user->getAverageRating();
+                                    $fullStars = floor($averageRating);
+                                    $hasHalfStar = ($averageRating - $fullStars) >= 0.5;
+                                @endphp
+
+                                @for($i = 1; $i <= 5; $i++)
+                                    @if($i <= $fullStars)
+                                        <span class="star filled">★</span>
+                                    @elseif($i == $fullStars + 1 && $hasHalfStar)
+                                        <span class="star half">☆</span>
+                                    @else
+                                        <span class="star empty">☆</span>
+                                    @endif
+                                @endfor
+                            </div>
+                        @else
+                            <div class="rating-stars">
+                                @for($i = 1; $i <= 5; $i++)
+                                    <span class="star empty">☆</span>
+                                @endfor
+                            </div>
+                        @endif
+                    </div>
+                </div>
             </div>
             <div class="mypage__user--btn">
             <a class="btn2" href="/mypage/profile">プロフィールを編集</a>

@@ -10,9 +10,52 @@
     align-items: center;
 }
 
+.user__details{
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 .user__name{
     font-size: 20px;
     font-weight: bold;
+    margin: 0;
+}
+
+/* 評価表示のスタイル */
+.user__rating {
+    display: flex;
+    align-items: center;
+}
+
+.rating-stars {
+    display: flex;
+    gap: 4px;
+}
+
+.star {
+    font-size: 24px;
+    color: #e0e0e0;
+    transition: all 0.3s ease;
+    cursor: default;
+}
+
+.star.filled {
+    color: #ffcc00;
+    transform: scale(1.1);
+}
+
+.star.half {
+    color: #ffcc00;
+    transform: scale(1.1);
+}
+
+.star.empty {
+    color: #e0e0e0;
+}
+
+.star:hover {
+    transform: scale(1.2);
 }
 
 .user__img{

@@ -64,12 +64,12 @@ class User extends Authenticatable
 
     public function sentMessages()
     {
-        return $this->hasMany(Message::class, 'sender_id');
+        return $this->hasMany('App\Models\Message', 'sender_id');
     }
 
     public function receivedMessages()
     {
-        return $this->hasMany(Message::class, 'receiver_id');
+        return $this->hasMany('App\Models\Message', 'receiver_id');
     }
 
     /**
@@ -96,7 +96,7 @@ class User extends Authenticatable
      */
     public function getUnreadMessageCountForPurchasedItems()
     {
-        $purchasedItemIds = SoldItem::where('user_id', $this->id)->pluck('item_id');
+        $purchasedItemIds = \App\Models\SoldItem::where('user_id', $this->id)->pluck('item_id');
 
         return $this->receivedMessages()
             ->whereIn('item_id', $purchasedItemIds)
@@ -109,7 +109,7 @@ class User extends Authenticatable
      */
     public function givenRatings()
     {
-        return $this->hasMany(Rating::class, 'rater_id');
+        return $this->hasMany('App\Models\Rating', 'rater_id');
     }
 
     /**
@@ -117,7 +117,7 @@ class User extends Authenticatable
      */
     public function receivedRatings()
     {
-        return $this->hasMany(Rating::class, 'rated_user_id');
+        return $this->hasMany('App\Models\Rating', 'rated_user_id');
     }
 
     /**
