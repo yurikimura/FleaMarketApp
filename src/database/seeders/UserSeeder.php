@@ -3,33 +3,45 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class UserSeeder extends Seeder
 {
     /**
-     * データベースに対してユーザーデータの追加の実行
+     * Run the database seeds.
      *
      * @return void
      */
     public function run()
     {
-        DB::table('users')->insert([
+        \DB::table('users')->insert([
             [
-                'name' => Str::random(10),
+                'name' => '山田太郎',
                 'email' => 'test@example.com',
-                'password' => 'password123',
-                'created_at' => now(),
-                'updated_at' => now(),
+                'password' => Hash::make('password123'),
+                'created_at' => now()->subMonths(3),
+                'updated_at' => now()->subMonths(3),
             ],
             [
-                'name' => 'ダミー太郎',
+                'name' => '佐藤花子',
                 'email' => 'test2@example.com',
-                'password' => 'password123',
-                'created_at' => now(),
-                'updated_at' => now(),
+                'password' => Hash::make('password123'),
+                'created_at' => now()->subMonths(3),
+                'updated_at' => now()->subMonths(3),
+            ],
+            [
+                'name' => '鈴木一郎',
+                'email' => 'test3@example.com',
+                'password' => Hash::make('password123'),
+                'created_at' => now()->subMonths(3),
+                'updated_at' => now()->subMonths(3),
+            ],
+            [
+                'name' => '田中美咲',
+                'email' => 'test4@example.com',
+                'password' => Hash::make('password123'),
+                'created_at' => now()->subMonths(3),
+                'updated_at' => now()->subMonths(3),
             ],
         ]);
     }

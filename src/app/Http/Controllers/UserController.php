@@ -34,6 +34,8 @@ class UserController extends Controller
         }
 
         $profile = Profile::where('user_id', Auth::id())->first();
+        $isNewProfile = !$profile; // 新規プロフィールかどうかを判定
+
         if ($profile){
             $profile->update([
                 'user_id' => Auth::id(),
@@ -56,6 +58,12 @@ class UserController extends Controller
             'name' => $request->name
         ]);
 
+        // 新規プロフィール作成の場合は、完了メッセージと共にホームページへ
+        if ($isNewProfile) {
+            return redirect('/')->with('success', 'プロフィール設定が完了しました！商品の購入が可能になりました。');
+        }
+
+        // 既存プロフィール更新の場合は、従来通りホームページへ
         return redirect('/');
     }
 

@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Fortify\Fortify;
 use Laravel\Fortify\Contracts\RegisterResponse;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Profile;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -23,7 +25,15 @@ class FortifyServiceProvider extends ServiceProvider
         $this->app->instance(RegisterResponse::class, new class implements RegisterResponse {
             public function toResponse($request)
             {
-                return redirect('/mypage/profile');
+                // 新規登録後、プロフィール情報が存在するかチェック
+                $profile = Profile::where('user_id', Auth::id())->first();
+
+                // プロフィール情報が存在しない、または住所情報が不完全な場合
+                if (!$profile || !$profile->postcode || !$profile->address) {
+                    return redirect('/mypage/profile')->with('message', 'プロフィール情報を入力してください。住所情報は商品購入時に必要です。');
+                }
+
+                return redirect('/');
             }
         });
     }

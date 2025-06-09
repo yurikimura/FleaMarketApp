@@ -67,7 +67,8 @@ class AuthController extends Controller
 
         Auth::login($user);
 
-        return redirect('/');
+        // 新規登録後はプロフィール設定ページに誘導
+        return redirect('/mypage/profile')->with('message', 'アカウント作成が完了しました！プロフィール情報を入力してください。住所情報は商品購入時に必要です。');
     }
 
     /**

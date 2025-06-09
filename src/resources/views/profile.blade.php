@@ -12,9 +12,26 @@
 @section('content')
 
 @include('components.header')
+
+<!-- メッセージ表示 -->
+@if(session('message'))
+    <div class="alert alert-info" style="background-color: #d1ecf1; color: #0c5460; padding: 15px; margin: 20px auto; max-width: 600px; border-radius: 5px; text-align: center;">
+        {{ session('message') }}
+    </div>
+@endif
+
 <form action="/mypage/profile" method="post" class="profile center" enctype="multipart/form-data">
     @csrf
     <h1 class="page__title">プロフィール設定</h1>
+
+    <!-- 新規ユーザー向けの案内メッセージ -->
+    @if(!$profile || !$profile->postcode || !$profile->address)
+        <div class="welcome-message" style="background-color: #fff3cd; color: #856404; padding: 15px; margin-bottom: 20px; border-radius: 5px; border: 1px solid #ffeaa7;">
+            <h3 style="margin-bottom: 10px;">ようこそ！プロフィール設定を完了しましょう</h3>
+            <p>商品を購入する際に配送先情報が必要になります。下記の情報をご入力ください。</p>
+        </div>
+    @endif
+
     <div class="user">
         <div class="user__img">
             @if (isset($profile->img_url))

@@ -16,6 +16,12 @@ class PurchaseController extends Controller
     public function index($item_id, Request $request){
         $item = Item::find($item_id);
         $user = User::find(Auth::id());
+
+        // ユーザーの住所情報をチェック
+        if (!$user->profile || !$user->profile->postcode || !$user->profile->address) {
+            return redirect('/mypage/profile')->with('message', '商品を購入するには住所情報の登録が必要です。プロフィール設定を完了してください。');
+        }
+
         // $data = $request->session()->put('item_id',$item_id);
         return view('purchase',compact('item','user'));
     }

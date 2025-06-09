@@ -12,6 +12,20 @@
 @section('content')
 
 @include('components.header')
+
+<!-- メッセージ表示 -->
+@if(session('success'))
+    <div class="alert alert-success" style="background-color: #d4edda; color: #155724; padding: 15px; margin: 20px auto; max-width: 800px; border-radius: 5px; text-align: center;">
+        {{ session('success') }}
+    </div>
+@endif
+
+@if(session('error'))
+    <div class="alert alert-error" style="background-color: #f8d7da; color: #721c24; padding: 15px; margin: 20px auto; max-width: 800px; border-radius: 5px; text-align: center;">
+        {{ session('error') }}
+    </div>
+@endif
+
 <div class="border">
     <ul class="border__list">
         <li><a href="/">おすすめ</a></li>
