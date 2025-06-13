@@ -648,3 +648,75 @@
         width: auto;
     }
 }
+
+/* 取引完了モーダル */
+#completeModal .modal-content {
+    max-width: 400px;
+    margin: 15% auto;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+#completeModal .modal-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#completeModal .modal-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 18px;
+}
+
+#completeModal .modal-body {
+    padding: 20px;
+}
+
+#completeModal .modal-body p {
+    margin: 0 0 15px 0;
+    color: #666;
+    line-height: 1.5;
+}
+
+#completeModal .modal-body p:last-child {
+    margin-bottom: 0;
+}
+
+#completeModal .modal-actions {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+#completeModal .btn-cancel {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#completeModal .btn-cancel:hover {
+    background-color: #5a6268;
+}
+
+#completeModal .btn-submit {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#completeModal .btn-submit:hover {
+    background-color: #218838;
+}

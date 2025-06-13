@@ -28,6 +28,13 @@ class RatingTest extends TestCase
             'condition_id' => $condition->id,
         ]);
 
+        // 取引完了状態を作成
+        $soldItem = SoldItem::create([
+            'item_id' => $item->id,
+            'user_id' => $buyer->id,
+            'is_completed' => true
+        ]);
+
         // 買い手として評価を投稿
         $this->actingAs($buyer);
 
@@ -65,6 +72,13 @@ class RatingTest extends TestCase
             'condition_id' => $condition->id,
         ]);
 
+        // 取引完了状態を作成
+        $soldItem = SoldItem::create([
+            'item_id' => $item->id,
+            'user_id' => $buyer->id,
+            'is_completed' => true
+        ]);
+
         // 売り手として評価を投稿
         $this->actingAs($seller);
 
@@ -95,6 +109,13 @@ class RatingTest extends TestCase
         $item = Item::factory()->create([
             'user_id' => $user->id,
             'condition_id' => $condition->id,
+        ]);
+
+        // 取引完了状態を作成
+        $soldItem = SoldItem::create([
+            'item_id' => $item->id,
+            'user_id' => $user->id,
+            'is_completed' => true
         ]);
 
         $this->actingAs($user);

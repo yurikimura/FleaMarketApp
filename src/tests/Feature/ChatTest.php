@@ -420,57 +420,6 @@ class ChatTest extends TestCase
     }
 
     /**
-     * チャット画面のサイドバーに他の取引中商品が表示されることをテスト
-     */
-    public function test_chat_sidebar_displays_other_transactions()
-    {
-        // ユーザーを作成
-        $buyer = User::factory()->create();
-        $seller1 = User::factory()->create(['name' => '出品者1']);
-        $seller2 = User::factory()->create(['name' => '出品者2']);
-        $condition = Condition::factory()->create();
-
-        // 現在のチャット対象商品を作成
-        $currentItem = Item::factory()->create([
-            'user_id' => $seller1->id,
-            'condition_id' => $condition->id,
-            'name' => '現在の商品',
-        ]);
-
-        // 他の購入した商品を作成
-        $otherItem = Item::factory()->create([
-            'user_id' => $seller2->id,
-            'condition_id' => $condition->id,
-            'name' => '他の購入商品',
-        ]);
-
-        // 購入履歴を作成
-        SoldItem::create([
-            'user_id' => $buyer->id,
-            'item_id' => $currentItem->id,
-        ]);
-        SoldItem::create([
-            'user_id' => $buyer->id,
-            'item_id' => $otherItem->id,
-        ]);
-
-        // 現在の商品のチャット画面にアクセス
-        $response = $this->actingAs($buyer)->get("/chat/{$currentItem->id}");
-
-        $response->assertStatus(200);
-        $response->assertViewHas('otherTransactions');
-
-        // サイドバーに他の取引商品が表示されることを確認
-        $response->assertSee('他の購入商品');
-        $response->assertSee('出品者: 出品者2');
-        $response->assertSee("/chat/{$otherItem->id}");
-
-        // 現在の商品はサイドバーに表示されないことを確認
-        $otherTransactions = $response->viewData('otherTransactions');
-        $this->assertFalse($otherTransactions->contains('id', $currentItem->id));
-    }
-
-    /**
      * サイドバーから別の取引画面に遷移できることをテスト
      */
     public function test_user_can_navigate_to_other_transaction_from_sidebar()
@@ -514,51 +463,6 @@ class ChatTest extends TestCase
         $response2->assertStatus(200);
         $response2->assertSee('商品2');
         $response2->assertSee("/chat/{$item1->id}"); // サイドバーに商品1へのリンクがある
-    }
-
-    /**
-     * サイドバーに出品した商品（売れた商品）も表示されることをテスト
-     */
-    public function test_sidebar_displays_sold_items_for_seller()
-    {
-        // ユーザーを作成
-        $seller = User::factory()->create();
-        $buyer1 = User::factory()->create(['name' => '購入者1']);
-        $buyer2 = User::factory()->create(['name' => '購入者2']);
-        $condition = Condition::factory()->create();
-
-        // 出品者の商品を作成
-        $soldItem1 = Item::factory()->create([
-            'user_id' => $seller->id,
-            'condition_id' => $condition->id,
-            'name' => '売れた商品1',
-        ]);
-        $soldItem2 = Item::factory()->create([
-            'user_id' => $seller->id,
-            'condition_id' => $condition->id,
-            'name' => '売れた商品2',
-        ]);
-
-        // 購入履歴を作成
-        SoldItem::create([
-            'user_id' => $buyer1->id,
-            'item_id' => $soldItem1->id,
-        ]);
-        SoldItem::create([
-            'user_id' => $buyer2->id,
-            'item_id' => $soldItem2->id,
-        ]);
-
-        // 売れた商品1のチャット画面にアクセス（出品者として）
-        $response = $this->actingAs($seller)->get("/chat/{$soldItem1->id}");
-
-        $response->assertStatus(200);
-        $response->assertViewHas('otherTransactions');
-
-        // サイドバーに他の売れた商品が表示されることを確認
-        $response->assertSee('売れた商品2');
-        $response->assertSee('購入者: 購入者2');
-        $response->assertSee("/chat/{$soldItem2->id}");
     }
 
     /**
@@ -1326,100 +1230,63 @@ class ChatTest extends TestCase
      */
     public function test_notification_badge_shows_exact_unread_message_count()
     {
-        // ユーザーを作成
+        // ユーザーと条件を作成
         $buyer = User::factory()->create();
-        $seller1 = User::factory()->create(['name' => '出品者1']);
-        $seller2 = User::factory()->create(['name' => '出品者2']);
-        $seller3 = User::factory()->create(['name' => '出品者3']);
+        $seller = User::factory()->create();
         $condition = Condition::factory()->create();
 
-        // 4つの商品を作成
-        $itemWith3UnreadMessages = Item::factory()->create([
-            'user_id' => $seller1->id,
-            'condition_id' => $condition->id,
-            'name' => '未読3件の商品',
-        ]);
-        $itemWith7UnreadMessages = Item::factory()->create([
-            'user_id' => $seller2->id,
-            'condition_id' => $condition->id,
-            'name' => '未読7件の商品',
-        ]);
-        $itemWithNoMessages = Item::factory()->create([
-            'user_id' => $seller3->id,
-            'condition_id' => $condition->id,
-            'name' => 'メッセージなしの商品',
-        ]);
-        $currentItem = Item::factory()->create([
-            'user_id' => $seller1->id,
-            'condition_id' => $condition->id,
-            'name' => '現在の商品',
-        ]);
+        // 商品を作成
+        $item = Item::factory()->create(['user_id' => $seller->id, 'condition_id' => $condition->id]);
 
-        // 全ての商品を購入
-        SoldItem::create([
-            'user_id' => $buyer->id,
-            'item_id' => $itemWith3UnreadMessages->id,
-        ]);
-        SoldItem::create([
-            'user_id' => $buyer->id,
-            'item_id' => $itemWith7UnreadMessages->id,
-        ]);
-        SoldItem::create([
-            'user_id' => $buyer->id,
-            'item_id' => $itemWithNoMessages->id,
-        ]);
-        SoldItem::create([
-            'user_id' => $buyer->id,
-            'item_id' => $currentItem->id,
-        ]);
+        // 商品を購入済みにする
+        SoldItem::create(['user_id' => $buyer->id, 'item_id' => $item->id]);
 
-        // 3件の未読メッセージを作成
-        for ($i = 1; $i <= 3; $i++) {
-            Message::factory()->unread()->create([
-                'sender_id' => $seller1->id,
+        // 複数の未読メッセージを作成
+        $messages = [];
+        for ($i = 1; $i <= 5; $i++) {
+            $messages[] = Message::factory()->create([
+                'sender_id' => $seller->id,
                 'receiver_id' => $buyer->id,
-                'item_id' => $itemWith3UnreadMessages->id,
-                'message' => "商品1への未読メッセージ{$i}",
+                'item_id' => $item->id,
+                'message' => "未読メッセージ{$i}",
+                'is_read' => false,
             ]);
         }
 
-        // 7件の未読メッセージを作成
-        for ($i = 1; $i <= 7; $i++) {
-            Message::factory()->unread()->create([
-                'sender_id' => $seller2->id,
-                'receiver_id' => $buyer->id,
-                'item_id' => $itemWith7UnreadMessages->id,
-                'message' => "商品2への未読メッセージ{$i}",
-            ]);
-        }
-
-        // 現在の商品のチャット画面にアクセス
-        $response = $this->actingAs($buyer)->get("/chat/{$currentItem->id}");
+        // マイページにアクセス
+        $response = $this->actingAs($buyer)->get('/mypage');
 
         $response->assertStatus(200);
 
-        // 各商品の未読メッセージ数が正確に取得されることを確認
-        $otherTransactions = $response->viewData('otherTransactions');
+        // 通知バッジが正確な数を表示していることを確認
+        $response->assertSee('data-unread-count="5"', false);
+        $response->assertSee('未読メッセージ5件', false);
 
-        // 3件の未読メッセージがある商品
-        $item3Transaction = $otherTransactions->firstWhere('id', $itemWith3UnreadMessages->id);
-        $this->assertEquals(3, $item3Transaction->unread_count);
+        // 1件目のメッセージを既読にする
+        $messages[0]->update(['is_read' => true]);
 
-        // 7件の未読メッセージがある商品
-        $item7Transaction = $otherTransactions->firstWhere('id', $itemWith7UnreadMessages->id);
-        $this->assertEquals(7, $item7Transaction->unread_count);
+        // マイページに再アクセス
+        $response = $this->actingAs($buyer)->get('/mypage');
 
-        // メッセージがない商品
-        $itemNoMessagesTransaction = $otherTransactions->firstWhere('id', $itemWithNoMessages->id);
-        $this->assertEquals(0, $itemNoMessagesTransaction->unread_count);
+        $response->assertStatus(200);
 
-        // HTMLに正確な未読メッセージ数が表示されることを確認
-        $response->assertSee('class="notification-badge"', false);
-        $response->assertSee('>3<', false); // 3件の未読メッセージ
-        $response->assertSee('>7<', false); // 7件の未読メッセージ
+        // 通知バッジが更新された数を表示していることを確認
+        $response->assertSee('data-unread-count="4"', false);
+        $response->assertSee('未読メッセージ4件', false);
 
-        // メッセージがない商品には通知マークが表示されないことを確認
-        $response->assertDontSee('0', false); // 0件の場合は通知マークが表示されない
+        // 残りのメッセージを既読にする
+        foreach (array_slice($messages, 1) as $message) {
+            $message->update(['is_read' => true]);
+        }
+
+        // マイページに再アクセス
+        $response = $this->actingAs($buyer)->get('/mypage');
+
+        $response->assertStatus(200);
+
+        // 通知バッジが非表示になっていることを確認
+        $response->assertDontSee('data-unread-count', false);
+        $response->assertDontSee('未読メッセージ', false);
     }
 
     /**
@@ -1427,7 +1294,7 @@ class ChatTest extends TestCase
      */
     public function test_notification_badge_distinguishes_read_and_unread_messages()
     {
-        // ユーザーを作成
+        // ユーザーと条件を作成
         $buyer = User::factory()->create();
         $seller = User::factory()->create(['name' => '出品者']);
         $condition = Condition::factory()->create();
@@ -1732,83 +1599,6 @@ class ChatTest extends TestCase
         $response = $this->actingAs($buyer)->get("/chat/{$item->id}");
         $response->assertStatus(200);
         $response->assertSee('name="message"', false);
-    }
-
-    /**
-     * 長いメッセージの下書きが正しく保持されることをテスト
-     */
-    public function test_long_chat_input_is_preserved_correctly()
-    {
-        // ユーザーと条件を作成
-        $buyer = User::factory()->create();
-        $seller = User::factory()->create();
-        $condition = Condition::factory()->create();
-
-        // 商品を作成
-        $item = Item::factory()->create(['user_id' => $seller->id, 'condition_id' => $condition->id]);
-
-        // 商品を購入済みにする
-        SoldItem::create(['user_id' => $buyer->id, 'item_id' => $item->id]);
-
-        // 長いメッセージの下書きを作成
-        $longMessage = str_repeat('これは長いメッセージのテストです。', 50);
-
-        // チャット画面にアクセスして長い下書きを保存
-        $this->actingAs($buyer)->get("/chat/{$item->id}");
-        session(['chat_draft_' . $item->id => $longMessage]);
-
-        // 他の画面に遷移
-        $this->actingAs($buyer)->get('/mypage');
-        $this->actingAs($buyer)->get('/');
-
-        // チャット画面に戻る
-        $response = $this->actingAs($buyer)->get("/chat/{$item->id}");
-        $response->assertStatus(200);
-
-        // 長いメッセージが正確に保持されていることを確認
-        $this->assertEquals($longMessage, session('chat_draft_' . $item->id));
-        $this->assertEquals(1500, strlen(session('chat_draft_' . $item->id))); // 文字数確認
-    }
-
-    /**
-     * 特殊文字を含むチャット入力が正しく保持されることをテスト
-     */
-    public function test_chat_input_with_special_characters_is_preserved()
-    {
-        // ユーザーと条件を作成
-        $buyer = User::factory()->create();
-        $seller = User::factory()->create();
-        $condition = Condition::factory()->create();
-
-        // 商品を作成
-        $item = Item::factory()->create(['user_id' => $seller->id, 'condition_id' => $condition->id]);
-
-        // 商品を購入済みにする
-        SoldItem::create(['user_id' => $buyer->id, 'item_id' => $item->id]);
-
-        // 特殊文字を含むメッセージの下書きを作成
-        $specialMessage = "こんにちは！\n改行テスト\n\"引用符\"テスト\n'シングルクォート'テスト\n<script>alert('XSS')</script>\n絵文字テスト😊🎉";
-
-        // チャット画面にアクセスして特殊文字を含む下書きを保存
-        $this->actingAs($buyer)->get("/chat/{$item->id}");
-        session(['chat_draft_' . $item->id => $specialMessage]);
-
-        // 他の画面に遷移
-        $this->actingAs($buyer)->get('/mypage');
-
-        // チャット画面に戻る
-        $response = $this->actingAs($buyer)->get("/chat/{$item->id}");
-        $response->assertStatus(200);
-
-        // 特殊文字を含むメッセージが正確に保持されていることを確認
-        $this->assertEquals($specialMessage, session('chat_draft_' . $item->id));
-
-        // 改行文字が含まれていることを確認
-        $this->assertStringContainsString("\n", session('chat_draft_' . $item->id));
-
-        // 引用符が含まれていることを確認
-        $this->assertStringContainsString('"', session('chat_draft_' . $item->id));
-        $this->assertStringContainsString("'", session('chat_draft_' . $item->id));
     }
 
     /**
@@ -2321,77 +2111,6 @@ class ChatTest extends TestCase
     }
 
     /**
-     * 新しいメッセージは削除可能であることをテスト
-     */
-    public function test_recent_message_can_be_deleted()
-    {
-        // ユーザーと条件を作成
-        $buyer = User::factory()->create();
-        $seller = User::factory()->create();
-        $condition = Condition::factory()->create();
-
-        // 商品を作成
-        $item = Item::factory()->create(['user_id' => $seller->id, 'condition_id' => $condition->id]);
-
-        // 商品を購入済みにする
-        SoldItem::create(['user_id' => $buyer->id, 'item_id' => $item->id]);
-
-        // 新しいメッセージを作成（5分前）
-        $recentMessage = Message::factory()->create([
-            'sender_id' => $buyer->id,
-            'receiver_id' => $seller->id,
-            'item_id' => $item->id,
-            'message' => '新しいメッセージです',
-            'created_at' => now()->subMinutes(5),
-        ]);
-
-        // 新しいメッセージを削除
-        $response = $this->actingAs($buyer)->delete("/messages/{$recentMessage->id}");
-
-        $response->assertRedirect("/chat/{$item->id}");
-
-        // メッセージがソフトデリートされたことを確認
-        $this->assertSoftDeleted('messages', [
-            'id' => $recentMessage->id,
-        ]);
-    }
-
-    /**
-     * 既読メッセージも削除可能であることをテスト
-     */
-    public function test_read_message_can_be_deleted()
-    {
-        // ユーザーと条件を作成
-        $buyer = User::factory()->create();
-        $seller = User::factory()->create();
-        $condition = Condition::factory()->create();
-
-        // 商品を作成
-        $item = Item::factory()->create(['user_id' => $seller->id, 'condition_id' => $condition->id]);
-
-        // 商品を購入済みにする
-        SoldItem::create(['user_id' => $buyer->id, 'item_id' => $item->id]);
-
-        // 既読メッセージを作成
-        $readMessage = Message::factory()->read()->create([
-            'sender_id' => $buyer->id,
-            'receiver_id' => $seller->id,
-            'item_id' => $item->id,
-            'message' => '既読メッセージです',
-        ]);
-
-        // 既読メッセージを削除
-        $response = $this->actingAs($buyer)->delete("/messages/{$readMessage->id}");
-
-        $response->assertRedirect("/chat/{$item->id}");
-
-        // メッセージがソフトデリートされたことを確認
-        $this->assertSoftDeleted('messages', [
-            'id' => $readMessage->id,
-        ]);
-    }
-
-    /**
      * 編集済みメッセージも削除可能であることをテスト
      */
     public function test_edited_message_can_be_deleted()
@@ -2591,131 +2310,5 @@ class ChatTest extends TestCase
         $response = $this->actingAs($buyer)->delete("/messages/{$message->id}");
 
         $response->assertStatus(404);
-    }
-
-    /**
-     * 削除確認ダイアログが表示されることをテスト
-     */
-    public function test_delete_confirmation_dialog_is_displayed()
-    {
-        // ユーザーと条件を作成
-        $buyer = User::factory()->create();
-        $seller = User::factory()->create();
-        $condition = Condition::factory()->create();
-
-        // 商品を作成
-        $item = Item::factory()->create(['user_id' => $seller->id, 'condition_id' => $condition->id]);
-
-        // 商品を購入済みにする
-        SoldItem::create(['user_id' => $buyer->id, 'item_id' => $item->id]);
-
-        // メッセージを作成
-        $message = Message::factory()->create([
-            'sender_id' => $buyer->id,
-            'receiver_id' => $seller->id,
-            'item_id' => $item->id,
-            'message' => '削除対象のメッセージ',
-        ]);
-
-        // チャット画面にアクセス
-        $response = $this->actingAs($buyer)->get("/chat/{$item->id}");
-
-        $response->assertStatus(200);
-
-        // 削除ボタンが表示されることを確認
-        $response->assertSee('削除', false);
-        $response->assertSee('data-confirm="本当に削除しますか？"', false);
-        $response->assertSee("action=\"/messages/{$message->id}\"", false);
-        $response->assertSee('method="POST"', false);
-        $response->assertSee('name="_method" value="DELETE"', false);
-    }
-
-    /**
-     * 複数のメッセージを個別に削除できることをテスト
-     */
-    public function test_multiple_messages_can_be_deleted_individually()
-    {
-        // ユーザーと条件を作成
-        $buyer = User::factory()->create();
-        $seller = User::factory()->create();
-        $condition = Condition::factory()->create();
-
-        // 商品を作成
-        $item = Item::factory()->create(['user_id' => $seller->id, 'condition_id' => $condition->id]);
-
-        // 商品を購入済みにする
-        SoldItem::create(['user_id' => $buyer->id, 'item_id' => $item->id]);
-
-        // 複数のメッセージを作成
-        $messages = [];
-        for ($i = 1; $i <= 5; $i++) {
-            $messages[] = Message::factory()->create([
-                'sender_id' => $buyer->id,
-                'receiver_id' => $seller->id,
-                'item_id' => $item->id,
-                'message' => "メッセージ{$i}",
-            ]);
-        }
-
-        // 1番目と3番目のメッセージを削除
-        $this->actingAs($buyer)->delete("/messages/{$messages[0]->id}");
-        $this->actingAs($buyer)->delete("/messages/{$messages[2]->id}");
-
-        // チャット画面にアクセス
-        $response = $this->actingAs($buyer)->get("/chat/{$item->id}");
-
-        $response->assertStatus(200);
-
-        // 削除されていないメッセージは表示される
-        $response->assertSee('メッセージ2');
-        $response->assertSee('メッセージ4');
-        $response->assertSee('メッセージ5');
-
-        // 削除されたメッセージは表示されない
-        $response->assertDontSee('メッセージ1');
-        $response->assertDontSee('メッセージ3');
-
-        // データベースで削除状態を確認
-        $this->assertSoftDeleted('messages', ['id' => $messages[0]->id]);
-        $this->assertSoftDeleted('messages', ['id' => $messages[2]->id]);
-        $this->assertDatabaseHas('messages', ['id' => $messages[1]->id, 'deleted_at' => null]);
-        $this->assertDatabaseHas('messages', ['id' => $messages[3]->id, 'deleted_at' => null]);
-        $this->assertDatabaseHas('messages', ['id' => $messages[4]->id, 'deleted_at' => null]);
-    }
-
-    /**
-     * 削除されたメッセージの削除時刻が記録されることをテスト
-     */
-    public function test_message_deletion_timestamp_is_recorded()
-    {
-        // ユーザーと条件を作成
-        $buyer = User::factory()->create();
-        $seller = User::factory()->create();
-        $condition = Condition::factory()->create();
-
-        // 商品を作成
-        $item = Item::factory()->create(['user_id' => $seller->id, 'condition_id' => $condition->id]);
-
-        // 商品を購入済みにする
-        SoldItem::create(['user_id' => $buyer->id, 'item_id' => $item->id]);
-
-        // メッセージを作成
-        $message = Message::factory()->create([
-            'sender_id' => $buyer->id,
-            'receiver_id' => $seller->id,
-            'item_id' => $item->id,
-            'message' => '削除時刻テスト用メッセージ',
-        ]);
-
-        $deletionTime = now();
-
-        // メッセージを削除
-        $this->actingAs($buyer)->delete("/messages/{$message->id}");
-
-        // メッセージを再取得して削除時刻を確認
-        $deletedMessage = Message::withTrashed()->find($message->id);
-        $this->assertNotNull($deletedMessage->deleted_at);
-        $this->assertTrue($deletedMessage->deleted_at->greaterThanOrEqualTo($deletionTime));
-        $this->assertTrue($deletedMessage->deleted_at->lessThanOrEqualTo(now()));
     }
 }

@@ -65,6 +65,31 @@
                 } else {
                     $partner = null;
                 }
+
+                $isCompleted = $soldItem && $soldItem->is_completed;
+
+                // 評価済みかチェック
+                $hasRated = false;
+                $canRate = false;
+                $partnerId = null;
+                if ($isCompleted) {
+                    if ($soldItem && $soldItem->user_id === $user->id) {
+                        // 購入者の場合、出品者を評価対象とする
+                        $partnerId = $item->user_id;
+                        $canRate = true;
+                    } elseif ($item->user_id === $user->id) {
+                        // 出品者の場合、購入者を評価対象とする
+                        $partnerId = $soldItem->user_id;
+                        $canRate = true;
+                    }
+
+                    if ($partnerId) {
+                        $hasRated = \App\Models\Rating::where('rater_id', $user->id)
+                                                     ->where('rated_user_id', $partnerId)
+                                                     ->where('item_id', $item->id)
+                                                     ->exists();
+                    }
+                }
             @endphp
 
             <!-- 取引相手の名前 -->
@@ -85,32 +110,11 @@
                 </div>
 
                 <!-- 取引完了・評価ボタン -->
-                @php
-                    $isCompleted = $soldItem && $soldItem->is_completed;
-
-                    // 取引相手のIDを取得
-                    $partnerId = null;
-                    if ($isBuyer) {
-                        $partnerId = $item->user_id; // 出品者
-                    } elseif ($isSeller) {
-                        $partnerId = $soldItem->user_id; // 購入者
-                    }
-
-                    // 評価済みかチェック
-                    $hasRated = false;
-                    if ($partnerId && $isCompleted) {
-                        $hasRated = \App\Models\Rating::where('rater_id', $user->id)
-                                                     ->where('rated_user_id', $partnerId)
-                                                     ->where('item_id', $item->id)
-                                                     ->exists();
-                    }
-                @endphp
-
                 <div class="transaction-actions">
                     @if($isBuyer && !$isCompleted)
                         <!-- 購入者：取引完了ボタン -->
-                        <button class="btn-complete" onclick="completeTransaction()">取引完了</button>
-                    @elseif($isCompleted && !$hasRated)
+                        <button class="btn-complete" onclick="openCompleteModal()">取引完了</button>
+                    @elseif($isCompleted && $canRate && !$hasRated)
                         <!-- 取引完了後：評価ボタン -->
                         <button class="btn-complete" onclick="openRatingModal()">取引相手を評価する</button>
                     @elseif($isCompleted && $hasRated)
@@ -153,37 +157,12 @@
             </div>
 
             <!-- メッセージ入力フォーム -->
-            @php
-                $soldItem = $item->soldItem;
-                $isCompleted = $soldItem && $soldItem->is_completed;
-
-                // 評価済みかチェック
-                $hasRated = false;
-                if ($isCompleted) {
-                    $partnerId = null;
-                    if ($soldItem && $soldItem->user_id === $user->id) {
-                        // 購入者の場合、出品者を評価対象とする
-                        $partnerId = $item->user_id;
-                    } elseif ($item->user_id === $user->id) {
-                        // 出品者の場合、購入者を評価対象とする
-                        $partnerId = $soldItem->user_id;
-                    }
-
-                    if ($partnerId) {
-                        $hasRated = \App\Models\Rating::where('rater_id', $user->id)
-                                                     ->where('rated_user_id', $partnerId)
-                                                     ->where('item_id', $item->id)
-                                                     ->exists();
-                    }
-                }
-            @endphp
-
             <div class="chat__input">
                 @if($isCompleted)
                     <!-- 取引完了後のメッセージ -->
                     <div class="transaction-completed-message">
                         <p>取引が完了しました。</p>
-                        @if(!$hasRated)
+                        @if($canRate && !$hasRated)
                             <p>今回の取引相手はどうでしたか？</p>
                             <div class="rating-stars">
                                 <span class="star" data-rating="1">★</span>
@@ -193,6 +172,8 @@
                                 <span class="star" data-rating="5">★</span>
                             </div>
                             <button type="button" class="btn-rating" onclick="openRatingModal()">送信する</button>
+                        @elseif($hasRated)
+                            <p>評価済みです</p>
                         @endif
                     </div>
                 @else
@@ -261,10 +242,42 @@
     </div>
 </div>
 
+<!-- 取引完了モーダル -->
+<div id="completeModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>取引完了</h3>
+            <span class="close" onclick="closeCompleteModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>取引を完了しますか？</p>
+            <p>取引完了後は、取引相手を評価することができます。</p>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="closeCompleteModal()">キャンセル</button>
+                <button type="button" class="btn-submit" onclick="confirmCompleteTransaction()">取引を完了する</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+// 取引完了モーダル
+function openCompleteModal() {
+    document.getElementById('completeModal').style.display = 'block';
+}
+
+function closeCompleteModal() {
+    document.getElementById('completeModal').style.display = 'none';
+}
+
+// 取引完了確認
+function confirmCompleteTransaction() {
+    closeCompleteModal();
+    completeTransaction();
+}
+
 // 取引完了処理
 function completeTransaction() {
-    // 確認ダイアログを削除し、すぐに取引完了処理を実行
     fetch(`/transaction/{{ $item->id }}/complete`, {
         method: 'POST',
         headers: {
@@ -276,7 +289,9 @@ function completeTransaction() {
     .then(data => {
         if (data.success) {
             // 取引完了後、すぐに評価モーダルを表示
-            openRatingModal();
+            setTimeout(() => {
+                openRatingModal();
+            }, 500);
         } else {
             alert(data.error || '取引完了に失敗しました');
         }
@@ -367,8 +382,8 @@ document.getElementById('ratingForm').addEventListener('submit', function(e) {
         if (data.success) {
             alert(data.success);
             closeRatingModal();
-            // 評価完了後にページをリロードして取引完了状態を反映
-            location.reload();
+            // 評価完了後に商品一覧画面にリダイレクト
+            window.location.href = '/';
         } else {
             alert(data.error || '評価の送信に失敗しました');
         }
@@ -382,32 +397,28 @@ document.getElementById('ratingForm').addEventListener('submit', function(e) {
 function editMessage(messageId, currentMessage) {
     const newMessage = prompt('メッセージを編集してください:', currentMessage);
     if (newMessage !== null && newMessage.trim() !== '') {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `/messages/${messageId}`;
-
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = '_token';
-        csrfInput.value = csrfToken;
-
-        const methodInput = document.createElement('input');
-        methodInput.type = 'hidden';
-        methodInput.name = '_method';
-        methodInput.value = 'PUT';
-
-        const messageInput = document.createElement('input');
-        messageInput.type = 'hidden';
-        messageInput.name = 'message';
-        messageInput.value = newMessage;
-
-        form.appendChild(csrfInput);
-        form.appendChild(methodInput);
-        form.appendChild(messageInput);
-
-        document.body.appendChild(form);
-        form.submit();
+        fetch(`/messages/${messageId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                message: newMessage
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.error || 'メッセージの編集に失敗しました');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('メッセージの編集に失敗しました');
+        });
     }
 }
 </script>

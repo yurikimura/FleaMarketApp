@@ -332,28 +332,23 @@ class UserController extends Controller
      */
     public function updateMessage(Request $request, Message $message)
     {
-        $request->validate([
-            'message' => 'required|string|max:1000',
-        ]);
-
-        $user = User::find(Auth::id());
-
-        // 自分のメッセージかどうかを確認
-        if ($message->sender_id !== $user->id) {
-            abort(403, 'このメッセージを編集する権限がありません。');
+        // メッセージの所有者チェック
+        if ($message->sender_id !== Auth::id()) {
+            return response()->json(['error' => 'このメッセージを編集する権限がありません。'], 403);
         }
 
         // 15分以内のメッセージのみ編集可能
         if ($message->created_at->diffInMinutes(now()) > 15) {
-            return redirect()->back()->with('error', 'メッセージは送信から15分以内のみ編集可能です。');
+            return response()->json(['error' => 'メッセージは投稿から15分以内にのみ編集可能です。'], 403);
         }
 
+        // メッセージを更新
         $message->update([
             'message' => $request->message,
-            'is_edited' => true,
+            'is_edited' => true
         ]);
 
-        return redirect()->route('chat.show', $message->item_id)->with('success', 'メッセージを編集しました。');
+        return response()->json(['success' => true]);
     }
 
     /**
