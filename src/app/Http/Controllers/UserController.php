@@ -377,7 +377,7 @@ class UserController extends Controller
     /**
      * 取引を完了する
      */
-    public function completeTransaction(Request $request, $itemId)
+    public function completeTransaction($itemId)
     {
         $user = User::find(Auth::id());
         $item = Item::findOrFail($itemId);
@@ -391,82 +391,63 @@ class UserController extends Controller
             return response()->json(['error' => '取引完了権限がありません'], 403);
         }
 
-        // 既に完了している場合は重複処理を避ける
-        $wasAlreadyCompleted = $soldItem->is_completed;
-
-        // 取引を完了状態にする
-        $soldItem->update(['is_completed' => true]);
-
-        // 初回完了時のみメール通知を送信
-        if (!$wasAlreadyCompleted) {
-            $seller = User::find($item->user_id);
-            $buyer = $user;
-
-            try {
-                Mail::to($seller->email)->send(new TransactionCompletedMail($item, $buyer, $seller));
-            } catch (\Exception $e) {
-                // メール送信エラーをログに記録（取引完了は継続）
-                \Log::error('取引完了メール送信エラー: ' . $e->getMessage());
-            }
-        }
-
-        return response()->json(['success' => '取引が完了しました']);
+        return response()->json(['success' => '取引完了ボタンが押されました']);
     }
 
     public function storeRating(Request $request)
     {
-        $request->validate([
-            'item_id' => 'required|exists:items,id',
-            'rated_user_id' => 'required|exists:users,id',
-            'rating' => 'required|integer|min:1|max:5',
-            'comment' => 'nullable|string|max:500',
-        ]);
+        $user = User::find(Auth::id());
+        $itemId = $request->item_id;
+        $ratedUserId = $request->rated_user_id;
+        $rating = $request->rating;
+        $comment = $request->comment;
 
-        $item = Item::findOrFail($request->item_id);
-        $rater = auth()->user();
-        $ratedUser = User::findOrFail($request->rated_user_id);
+        // 商品の存在確認
+        $item = Item::findOrFail($itemId);
 
-        // 取引に関わっているユーザーかチェック
-        $soldItem = SoldItem::where('item_id', $item->id)->first();
-        $isBuyer = $soldItem && $soldItem->user_id === $rater->id;
-        $isSeller = $item->user_id === $rater->id;
+        // 評価対象ユーザーの存在確認
+        $ratedUser = User::findOrFail($ratedUserId);
 
-        if (!$isBuyer && !$isSeller) {
-            return response()->json(['error' => '評価権限がありません'], 403);
-        }
-
-        // 取引が完了しているかチェック
-        if (!$soldItem || !$soldItem->is_completed) {
-            return response()->json(['error' => '取引が完了していません'], 400);
-        }
-
-        // 自分自身を評価しようとしていないかチェック
-        if ($rater->id === $ratedUser->id) {
+        // 自分自身を評価できない
+        if ($user->id === $ratedUserId) {
             return response()->json(['error' => '自分自身を評価することはできません'], 400);
         }
 
         // 既に評価済みかチェック
-        $existingRating = Rating::where('rater_id', $rater->id)
-            ->where('rated_user_id', $ratedUser->id)
-            ->where('item_id', $item->id)
-            ->first();
+        $hasRated = Rating::where('rater_id', $user->id)
+                         ->where('rated_user_id', $ratedUserId)
+                         ->where('item_id', $itemId)
+                         ->exists();
 
-        if ($existingRating) {
+        if ($hasRated) {
             return response()->json(['error' => '既に評価済みです'], 400);
+        }
+
+        // 取引完了状態を更新
+        $soldItem = SoldItem::where('item_id', $itemId)->first();
+        if ($soldItem) {
+            $soldItem->update(['is_completed' => true]);
+
+            // 出品者にメール通知を送信
+            $seller = User::find($item->user_id);
+            $buyer = User::find($soldItem->user_id);
+
+            try {
+                Mail::to($seller->email)->send(new TransactionCompletedMail($item, $buyer, $seller));
+            } catch (\Exception $e) {
+                \Log::error('取引完了メール送信エラー: ' . $e->getMessage());
+            }
         }
 
         // 評価を保存
         Rating::create([
-            'rater_id' => $rater->id,
-            'rated_user_id' => $ratedUser->id,
-            'item_id' => $item->id,
-            'rating' => $request->rating,
-            'comment' => $request->comment,
+            'rater_id' => $user->id,
+            'rated_user_id' => $ratedUserId,
+            'item_id' => $itemId,
+            'rating' => $rating,
+            'comment' => $comment
         ]);
 
-        return response()->json([
-            'success' => '評価が完了しました',
-            'redirect_url' => '/'
-        ]);
+        return response()->json(['success' => '評価が保存されました']);
     }
 }

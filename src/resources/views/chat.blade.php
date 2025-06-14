@@ -114,12 +114,9 @@
                     @if($isBuyer && !$isCompleted)
                         <!-- 購入者：取引完了ボタン -->
                         <button class="btn-complete" onclick="openCompleteModal()">取引完了</button>
-                    @elseif($isCompleted && $canRate && !$hasRated)
-                        <!-- 取引完了後：評価ボタン -->
+                    @elseif(!$isCompleted && $isSeller && !$hasRated)
+                        <!-- 販売者：評価ボタン -->
                         <button class="btn-complete" onclick="openRatingModal()">取引相手を評価する</button>
-                    @elseif($isCompleted && $hasRated)
-                        <!-- 評価済み -->
-                        <span class="status-completed">評価済み</span>
                     @elseif($isCompleted)
                         <!-- 取引完了済み -->
                         <span class="status-completed">取引完了済み</span>

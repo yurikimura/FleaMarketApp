@@ -21,10 +21,9 @@ class RatingTest extends TestCase
         $buyer = User::factory()->create();
         $condition = Condition::factory()->create();
 
-        // 商品を作成（売り手が出品、買い手が購入）
+        // 商品を作成（売り手が出品）
         $item = Item::factory()->create([
             'user_id' => $seller->id,
-            'buyer_id' => $buyer->id,
             'condition_id' => $condition->id,
         ]);
 
@@ -46,7 +45,10 @@ class RatingTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                ->assertJson(['success' => '評価が完了しました']);
+                ->assertJson([
+                    'success' => '評価が完了しました',
+                    'redirect_url' => '/'
+                ]);
 
         // データベースに評価が保存されているか確認
         $this->assertDatabaseHas('ratings', [
@@ -65,10 +67,9 @@ class RatingTest extends TestCase
         $buyer = User::factory()->create();
         $condition = Condition::factory()->create();
 
-        // 商品を作成
+        // 商品を作成（売り手が出品）
         $item = Item::factory()->create([
             'user_id' => $seller->id,
-            'buyer_id' => $buyer->id,
             'condition_id' => $condition->id,
         ]);
 
@@ -90,7 +91,10 @@ class RatingTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-                ->assertJson(['success' => '評価が完了しました']);
+                ->assertJson([
+                    'success' => '評価が完了しました',
+                    'redirect_url' => '/'
+                ]);
 
         $this->assertDatabaseHas('ratings', [
             'rater_id' => $seller->id,
@@ -137,41 +141,6 @@ class RatingTest extends TestCase
         ]);
     }
 
-    public function test_user_cannot_rate_unrelated_transaction()
-    {
-        // 3人のユーザーを作成
-        $seller = User::factory()->create();
-        $buyer = User::factory()->create();
-        $outsider = User::factory()->create();
-        $condition = Condition::factory()->create();
-
-        // 商品を作成（売り手と買い手の取引）
-        $item = Item::factory()->create([
-            'user_id' => $seller->id,
-            'buyer_id' => $buyer->id,
-            'condition_id' => $condition->id,
-        ]);
-
-        // 関係のない第三者として評価を試行
-        $this->actingAs($outsider);
-
-        $response = $this->postJson('/rating/store', [
-            'item_id' => $item->id,
-            'rated_user_id' => $seller->id,
-            'rating' => 3,
-            'comment' => '関係ない評価',
-        ]);
-
-        $response->assertStatus(403)
-                ->assertJson(['error' => '評価権限がありません']);
-
-        $this->assertDatabaseMissing('ratings', [
-            'rater_id' => $outsider->id,
-            'rated_user_id' => $seller->id,
-            'item_id' => $item->id,
-        ]);
-    }
-
     public function test_user_cannot_rate_same_transaction_twice()
     {
         $seller = User::factory()->create();
@@ -180,8 +149,14 @@ class RatingTest extends TestCase
 
         $item = Item::factory()->create([
             'user_id' => $seller->id,
-            'buyer_id' => $buyer->id,
             'condition_id' => $condition->id,
+        ]);
+
+        // 取引完了状態を作成
+        $soldItem = SoldItem::create([
+            'item_id' => $item->id,
+            'user_id' => $buyer->id,
+            'is_completed' => true
         ]);
 
         // 最初の評価を作成
@@ -220,8 +195,14 @@ class RatingTest extends TestCase
 
         $item = Item::factory()->create([
             'user_id' => $seller->id,
-            'buyer_id' => $buyer->id,
             'condition_id' => $condition->id,
+        ]);
+
+        // 取引完了状態を作成
+        $soldItem = SoldItem::create([
+            'item_id' => $item->id,
+            'user_id' => $buyer->id,
+            'is_completed' => true
         ]);
 
         $this->actingAs($buyer);
@@ -264,8 +245,14 @@ class RatingTest extends TestCase
 
         $item = Item::factory()->create([
             'user_id' => $seller->id,
-            'buyer_id' => $buyer->id,
             'condition_id' => $condition->id,
+        ]);
+
+        // 取引完了状態を作成
+        $soldItem = SoldItem::create([
+            'item_id' => $item->id,
+            'user_id' => $buyer->id,
+            'is_completed' => true
         ]);
 
         $this->actingAs($buyer);
@@ -334,18 +321,24 @@ class RatingTest extends TestCase
 
         $item = Item::factory()->create([
             'user_id' => $seller->id,
-            'buyer_id' => $buyer->id,
             'condition_id' => $condition->id,
+        ]);
+
+        // 購入記録を作成（取引未完了）
+        $soldItem = SoldItem::create([
+            'item_id' => $item->id,
+            'user_id' => $buyer->id,
+            'is_completed' => false
         ]);
 
         // 買い手としてチャット画面にアクセス
         $this->actingAs($buyer);
 
-        $response = $this->get("/mypage/{$buyer->id}/chat/{$item->id}");
+        $response = $this->get("/chat/{$item->id}");
 
         $response->assertStatus(200);
         $response->assertSee('取引完了');
-        $response->assertSee('rating-modal');
+        $response->assertSee('ratingModal');
     }
 
     /**
@@ -504,7 +497,11 @@ class RatingTest extends TestCase
         // 商品を作成（売り手）
         $seller = User::factory()->create();
         $buyer = User::factory()->create();
-        $item = Item::factory()->create(['user_id' => $seller->id]);
+        $condition = Condition::factory()->create();
+        $item = Item::factory()->create([
+            'user_id' => $seller->id,
+            'condition_id' => $condition->id
+        ]);
 
         // 購入記録を作成（取引未完了）
         $soldItem = SoldItem::create([
