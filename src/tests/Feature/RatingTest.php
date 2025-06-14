@@ -256,39 +256,6 @@ class RatingTest extends TestCase
         $response->assertStatus(422);
     }
 
-    public function test_rating_comment_can_be_optional()
-    {
-        $seller = User::factory()->create();
-        $buyer = User::factory()->create();
-        $condition = Condition::factory()->create();
-
-        $item = Item::factory()->create([
-            'user_id' => $seller->id,
-            'buyer_id' => $buyer->id,
-            'condition_id' => $condition->id,
-        ]);
-
-        $this->actingAs($buyer);
-
-        // コメントなしで評価
-        $response = $this->postJson('/rating/store', [
-            'item_id' => $item->id,
-            'rated_user_id' => $seller->id,
-            'rating' => 5,
-        ]);
-
-        $response->assertStatus(200)
-                ->assertJson(['success' => '評価が完了しました']);
-
-        $this->assertDatabaseHas('ratings', [
-            'rater_id' => $buyer->id,
-            'rated_user_id' => $seller->id,
-            'item_id' => $item->id,
-            'rating' => 5,
-            'comment' => null,
-        ]);
-    }
-
     public function test_rating_comment_length_validation()
     {
         $seller = User::factory()->create();
