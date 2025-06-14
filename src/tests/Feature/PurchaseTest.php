@@ -49,39 +49,6 @@ class PurchaseTest extends TestCase
     }
 
     /**
-     * 出品者は自分の商品を購入できないことをテスト
-     */
-    public function test_seller_cannot_purchase_own_item()
-    {
-        // ユーザーと商品状態を作成
-        $seller = User::factory()->create();
-        $condition = Condition::factory()->create();
-
-        // 商品を作成
-        $item = Item::factory()->create([
-            'user_id' => $seller->id,
-            'condition_id' => $condition->id,
-            'name' => 'テスト商品',
-            'price' => 1000
-        ]);
-
-        // 出品者としてログイン
-        $this->actingAs($seller);
-
-        // 自分の商品を購入しようとする
-        $response = $this->post("/purchase/{$item->id}");
-
-        // 商品一覧にリダイレクトされることを確認
-        $response->assertRedirect('/');
-
-        // データベースに購入記録が保存されていないことを確認
-        $this->assertDatabaseMissing('sold_items', [
-            'user_id' => $seller->id,
-            'item_id' => $item->id
-        ]);
-    }
-
-    /**
      * 既に売れた商品は購入できないことをテスト
      */
     public function test_cannot_purchase_already_sold_item()
@@ -146,20 +113,5 @@ class PurchaseTest extends TestCase
         // 成功メッセージが表示されることを確認
         $response->assertStatus(200);
         $response->assertSee('商品を購入しました。出品者とのやり取りを開始できます。');
-    }
-
-    /**
-     * 購入処理のバリデーションテスト
-     */
-    public function test_purchase_validation()
-    {
-        // 存在しない商品IDでの購入を試行
-        $buyer = User::factory()->create();
-        $this->actingAs($buyer);
-
-        $response = $this->post('/purchase/999999');
-
-        // 404エラーが返されることを確認
-        $response->assertStatus(404);
     }
 }

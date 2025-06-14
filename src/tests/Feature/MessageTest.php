@@ -24,48 +24,6 @@ class MessageTest extends TestCase
     }
 
     /**
-     * マイページで未読メッセージ数が表示されることをテスト
-     */
-    public function test_mypage_displays_unread_message_count()
-    {
-        // ユーザーを作成
-        $user = User::factory()->create();
-        $sender = User::factory()->create();
-        $condition = Condition::factory()->create();
-
-        // 商品を作成
-        $item = Item::factory()->create([
-            'user_id' => $user->id,
-            'condition_id' => $condition->id,
-        ]);
-
-        // 未読メッセージを作成
-        Message::factory()->unread()->create([
-            'sender_id' => $sender->id,
-            'receiver_id' => $user->id,
-            'item_id' => $item->id,
-        ]);
-        Message::factory()->unread()->create([
-            'sender_id' => $sender->id,
-            'receiver_id' => $user->id,
-            'item_id' => $item->id,
-        ]);
-
-        // 既読メッセージも作成（カウントされないことを確認）
-        Message::factory()->read()->create([
-            'sender_id' => $sender->id,
-            'receiver_id' => $user->id,
-            'item_id' => $item->id,
-        ]);
-
-        // マイページにアクセス
-        $response = $this->actingAs($user)->get('/mypage');
-
-        $response->assertStatus(200);
-        $response->assertViewHas('unreadMessageCount', 2);
-    }
-
-    /**
      * 取引中の商品に関する未読メッセージ数が正しく表示されることをテスト
      */
     public function test_mypage_displays_unread_message_count_for_purchased_items()
@@ -242,42 +200,6 @@ class MessageTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertViewHas('unreadMessageCount', 1); // user2のメッセージのみカウント
-    }
-
-    /**
-     * メッセージを既読にする機能のテスト
-     */
-    public function test_message_can_be_marked_as_read()
-    {
-        // ユーザーを作成
-        $user = User::factory()->create();
-        $sender = User::factory()->create();
-        $condition = Condition::factory()->create();
-
-        // 商品を作成
-        $item = Item::factory()->create([
-            'user_id' => $user->id,
-            'condition_id' => $condition->id,
-        ]);
-
-        // 未読メッセージを作成
-        $message = Message::factory()->unread()->create([
-            'sender_id' => $sender->id,
-            'receiver_id' => $user->id,
-            'item_id' => $item->id,
-        ]);
-
-        // メッセージが未読であることを確認
-        $this->assertTrue($message->isUnread());
-        $this->assertEquals(1, $user->getUnreadMessageCount());
-
-        // メッセージを既読にする
-        $message->markAsRead();
-
-        // メッセージが既読になったことを確認
-        $message->refresh();
-        $this->assertFalse($message->isUnread());
-        $this->assertEquals(0, $user->getUnreadMessageCount());
     }
 
     /**

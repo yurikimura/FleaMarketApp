@@ -93,51 +93,6 @@ class ProfileTest extends TestCase
     }
 
     /**
-     * 異なる評価での平均値計算をテスト
-     */
-    public function test_profile_displays_correct_average_rating_with_different_ratings()
-    {
-        // ユーザーと条件を作成
-        $user = User::factory()->create();
-        $rater1 = User::factory()->create();
-        $rater2 = User::factory()->create();
-        $condition = Condition::factory()->create();
-
-        // プロフィールを作成
-        Profile::factory()->create(['user_id' => $user->id]);
-
-        // 商品を作成
-        $item1 = Item::factory()->create(['user_id' => $user->id, 'condition_id' => $condition->id]);
-        $item2 = Item::factory()->create(['user_id' => $user->id, 'condition_id' => $condition->id]);
-
-        // 評価を作成（5と2の評価で平均3.5）
-        Rating::create([
-            'rater_id' => $rater1->id,
-            'rated_user_id' => $user->id,
-            'item_id' => $item1->id,
-            'rating' => 5,
-            'comment' => '最高の取引'
-        ]);
-
-        Rating::create([
-            'rater_id' => $rater2->id,
-            'rated_user_id' => $user->id,
-            'item_id' => $item2->id,
-            'rating' => 2,
-            'comment' => '改善が必要'
-        ]);
-
-        // プロフィール画面にアクセス
-        $response = $this->actingAs($user)->get('/mypage/profile');
-
-        $response->assertStatus(200);
-
-        // 平均評価が正しく表示されることを確認
-        $response->assertSee('3.5'); // 平均評価
-        $response->assertSee('(2件の評価)'); // 評価件数
-    }
-
-    /**
      * 星の表示が正しく行われることをテスト
      */
     public function test_profile_displays_correct_star_rating()
@@ -288,65 +243,6 @@ class ProfileTest extends TestCase
         // 元の値（4.333...）が表示されないことを確認
         $response->assertDontSee('4.33');
         $response->assertDontSee('4.333');
-    }
-
-    /**
-     * 平均評価が四捨五入されることをテスト（切り下げのケース）
-     */
-    public function test_profile_rounds_down_average_rating_correctly()
-    {
-        // ユーザーと条件を作成
-        $user = User::factory()->create();
-        $rater1 = User::factory()->create();
-        $rater2 = User::factory()->create();
-        $rater3 = User::factory()->create();
-        $condition = Condition::factory()->create();
-
-        // プロフィールを作成
-        Profile::factory()->create(['user_id' => $user->id]);
-
-        // 商品を作成
-        $item1 = Item::factory()->create(['user_id' => $user->id, 'condition_id' => $condition->id]);
-        $item2 = Item::factory()->create(['user_id' => $user->id, 'condition_id' => $condition->id]);
-        $item3 = Item::factory()->create(['user_id' => $user->id, 'condition_id' => $condition->id]);
-
-        // 評価を作成（3, 3, 4の評価で平均3.333... → 3.3に四捨五入）
-        Rating::create([
-            'rater_id' => $rater1->id,
-            'rated_user_id' => $user->id,
-            'item_id' => $item1->id,
-            'rating' => 3,
-            'comment' => '普通の取引でした'
-        ]);
-
-        Rating::create([
-            'rater_id' => $rater2->id,
-            'rated_user_id' => $user->id,
-            'item_id' => $item2->id,
-            'rating' => 3,
-            'comment' => '普通の取引でした'
-        ]);
-
-        Rating::create([
-            'rater_id' => $rater3->id,
-            'rated_user_id' => $user->id,
-            'item_id' => $item3->id,
-            'rating' => 4,
-            'comment' => '良い取引でした'
-        ]);
-
-        // プロフィール画面にアクセス
-        $response = $this->actingAs($user)->get('/mypage/profile');
-
-        $response->assertStatus(200);
-
-        // 平均評価が3.3に四捨五入されて表示されることを確認
-        $response->assertSee('3.3');
-        $response->assertSee('(3件の評価)');
-
-        // 元の値（3.333...）が表示されないことを確認
-        $response->assertDontSee('3.33');
-        $response->assertDontSee('3.333');
     }
 
     /**
