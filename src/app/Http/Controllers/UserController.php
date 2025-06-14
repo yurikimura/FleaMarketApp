@@ -96,7 +96,7 @@ class UserController extends Controller
                                 return $item;
                             });
 
-            // 出品者として取引中の商品（自分が出品した商品で購入済みかつ取引完了していない）
+            // 出品者として取引中の商品（自分が出品した商品で購入済みかつ取引完了していない商品）
             $soldItems = Item::where('user_id', $user->id)
                            ->whereHas('soldItem', function($query) {
                                $query->where('is_completed', false);

@@ -78,7 +78,7 @@
         <div class="item">
             @if(request()->get('page') == 'buy')
                 <!-- 購入した商品の場合はチャット画面へのリンク -->
-                <a href="/chat/{{$item->id}}">
+                <a href="/chat/{{$item->id}}?show_rating=true">
                     @if ($item->sold())
                         <div class="item__img sold">
                             <img src="{{ \Storage::url($item->img_url) }}" alt="商品画像">
@@ -104,19 +104,24 @@
                     <p class="item__name">{{$item->name}}</p>
                 </a>
             @else
-                <!-- 出品した商品の場合は商品詳細へのリンク -->
-                <a href="/item/{{$item->id}}">
-                    @if ($item->sold())
+                <!-- 出品した商品の場合 -->
+                @if ($item->sold())
+                    <!-- 売り切れアイテムはチャット画面へのリンク -->
+                    <a href="/chat/{{$item->id}}">
                         <div class="item__img sold">
                             <img src="{{ \Storage::url($item->img_url) }}" alt="商品画像">
                         </div>
-                    @else
+                        <p class="item__name">{{$item->name}}</p>
+                    </a>
+                @else
+                    <!-- 販売中アイテムは商品詳細へのリンク -->
+                    <a href="/item/{{$item->id}}">
                         <div class="item__img">
                             <img src="{{ \Storage::url($item->img_url) }}" alt="商品画像">
                         </div>
-                    @endif
-                    <p class="item__name">{{$item->name}}</p>
-                </a>
+                        <p class="item__name">{{$item->name}}</p>
+                    </a>
+                @endif
             @endif
         </div>
         @endforeach

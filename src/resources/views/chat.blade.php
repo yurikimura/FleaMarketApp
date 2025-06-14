@@ -114,9 +114,15 @@
                     @if($isBuyer && !$isCompleted)
                         <!-- 購入者：取引完了ボタン -->
                         <button class="btn-complete" onclick="openCompleteModal()">取引完了</button>
+                    @elseif($isBuyer && $isCompleted && !$hasRated)
+                        <!-- 購入者：評価ボタン（取引完了後） -->
+                        <button class="btn-complete" onclick="openRatingModal()">取引相手を評価する</button>
                     @elseif(!$isCompleted && $isSeller && !$hasRated)
                         <!-- 販売者：評価ボタン -->
                         <button class="btn-complete" onclick="openRatingModal()">取引相手を評価する</button>
+                    @elseif($isCompleted && $hasRated)
+                        <!-- 評価済み -->
+                        <span class="status-completed">評価済み</span>
                     @elseif($isCompleted)
                         <!-- 取引完了済み -->
                         <span class="status-completed">取引完了済み</span>
@@ -389,6 +395,22 @@ document.getElementById('ratingForm').addEventListener('submit', function(e) {
         console.error('Error:', error);
         alert('評価の送信に失敗しました');
     });
+});
+
+// ページ読み込み時の処理
+document.addEventListener('DOMContentLoaded', function() {
+    // URLパラメータをチェック
+    const urlParams = new URLSearchParams(window.location.search);
+    const showRating = urlParams.get('show_rating');
+
+    // 購入者で取引完了済みで未評価の場合、評価モーダルを自動表示
+    @if($isBuyer && $isCompleted && !$hasRated)
+        if (showRating === 'true') {
+            setTimeout(() => {
+                openRatingModal();
+            }, 500);
+        }
+    @endif
 });
 
 function editMessage(messageId, currentMessage) {
