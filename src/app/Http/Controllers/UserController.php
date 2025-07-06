@@ -286,10 +286,14 @@ class UserController extends Controller
      */
     public function sendMessage(Request $request, $itemId)
     {
-        $request->validate([
-            'message' => 'nullable|string|max:1000',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        \Log::info('メッセージ送信リクエスト', [
+            'request' => $request->all(),
+            'item_id' => $itemId,
         ]);
+        // $request->validate([
+        //     'message' => 'nullable|string|max:1000',
+        //     'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048000',
+        // ]);
 
         // メッセージまたは画像のいずれかが必須
         if (!$request->message && !$request->hasFile('image')) {
@@ -324,10 +328,12 @@ class UserController extends Controller
 
         // 画像アップロード処理
         $imagePath = null;
+        \Log::info("message00");
         if ($request->hasFile('image')) {
             $image = $request->file('image');
+            \Log::info("message01");
             $imagePath = Storage::disk('public')->put('chat_images', $image);
-
+            \Log::info("message02");
             // デバッグ用ログ
             \Log::info('画像保存完了', [
                 'image_path' => $imagePath,
