@@ -94,26 +94,14 @@
 
             <!-- 取引相手の名前 -->
             @if($partner)
-            <div class="chat__partner-info">
-                <h2 class="partner__name">「{{ $partner->name }}」さんとの取引</h2>
-            </div>
-            @endif
-
-            <!-- 商品情報 -->
-            <div class="chat__item-info">
-                <div class="item__img">
-                    <img src="{{ \Storage::url($item->img_url) }}" alt="商品画像">
-                </div>
-                <div class="item__details">
-                    <h3 class="item__name">{{ $item->name }}</h3>
-                    <p class="item__price">¥ {{ number_format($item->price) }}</p>
-                </div>
+            <div class="chat__partner-info" style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 class="partner__name">「{{ $partner->name }}」さんとの取引画面</h2>
 
                 <!-- 取引完了・評価ボタン -->
                 <div class="transaction-actions">
                     @if($isBuyer && !$isCompleted)
                         <!-- 購入者：取引完了ボタン -->
-                        <button class="btn-complete" onclick="openCompleteModal()">取引完了</button>
+                        <button class="btn-complete" onclick="openCompleteModal()">取引を完了する</button>
                     @elseif($isBuyer && $isCompleted && !$hasRated)
                         <!-- 購入者：評価ボタン（取引完了後） -->
                         <button class="btn-complete" onclick="openRatingModal()">取引相手を評価する</button>
@@ -129,6 +117,18 @@
                     @endif
                 </div>
             </div>
+            @endif
+
+            <!-- 商品情報 -->
+            <div class="chat__item-info">
+                <div class="item__img">
+                    <img src="{{ \Storage::url($item->img_url) }}" alt="商品画像">
+                </div>
+                <div class="item__details">
+                    <h3 class="item__name">{{ $item->name }}</h3>
+                    <p class="item__price">¥ {{ number_format($item->price) }}</p>
+                </div>
+            </div>
 
             <!-- メッセージエリア -->
             <div class="chat__messages">
@@ -136,7 +136,21 @@
                     @foreach($messages as $message)
                         <div class="message {{ $message->sender_id === $user->id ? 'message--sent' : 'message--received' }}">
                             <div class="message__content">
-                                <p class="message__text">{{ $message->message }}</p>
+                                @if($message->image_path)
+                                    <div class="message__image">
+                                        @if(file_exists(public_path('storage/' . $message->image_path)))
+                                            <img src="{{ asset('storage/' . $message->image_path) }}" alt="送信画像" onclick="openImageModal('{{ asset('storage/' . $message->image_path) }}')">
+                                        @else
+                                            <div class="image-error">
+                                                <p>画像が見つかりません</p>
+                                                <small>パス: {{ $message->image_path }}</small>
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endif
+                                @if($message->message)
+                                    <p class="message__text">{{ $message->message }}</p>
+                                @endif
                                 <span class="message__time">{{ $message->created_at->format('Y/m/d H:i') }}</span>
                                 @if($message->is_edited)
                                     <span class="message__edited">(編集済み)</span>
@@ -144,7 +158,9 @@
                             </div>
                             @if($message->sender_id === $user->id && $message->created_at->diffInMinutes(now()) <= 15)
                                 <div class="message__actions">
-                                    <button class="btn-edit" onclick="editMessage({{ $message->id }}, '{{ addslashes($message->message) }}')">編集</button>
+                                    @if($message->message)
+                                        <button class="btn-edit" onclick="editMessage({{ $message->id }}, '{{ addslashes($message->message) }}')">編集</button>
+                                    @endif
                                     <form method="POST" action="{{ route('message.delete', $message->id) }}" style="display: inline;" onsubmit="return confirm('本当に削除しますか？')">
                                         @csrf
                                         @method('DELETE')
@@ -181,14 +197,22 @@
                     </div>
                 @else
                     <!-- 通常のメッセージ入力フォーム -->
-                    <form action="{{ route('chat.message.send', $item->id) }}" method="POST" class="message-form">
+                    <form action="{{ route('chat.message.send', $item->id) }}" method="POST" class="message-form" enctype="multipart/form-data">
                         @csrf
                         <div class="input-container">
-                            <textarea name="message" placeholder="メッセージを入力してください" class="message-input" required></textarea>
+                            <textarea name="message" placeholder="メッセージを入力してください" class="message-input"></textarea>
+                            <div class="image-upload-container">
+                                <input type="file" name="image" id="image-input" accept="image/*" style="display: none;" onchange="previewImage(event)">
+                                <button type="button" class="btn-image" onclick="document.getElementById('image-input').click()">
+                                    画像を追加
+                                </button>
+                                <div id="image-preview" style="display: none;">
+                                    <img id="preview-img" src="" alt="プレビュー">
+                                    <button type="button" class="btn-remove-image" onclick="removeImage()">×</button>
+                                </div>
+                            </div>
                             <button type="submit" class="btn-send">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M2 21L23 12L2 3V10L17 12L2 14V21Z" fill="currentColor"/>
-                                </svg>
+                                <img src="{{ asset('img/send.jpg') }}" alt="送信" class="send-icon">
                             </button>
                         </div>
                     </form>
@@ -263,6 +287,18 @@
     </div>
 </div>
 
+<!-- 画像モーダル -->
+<div id="imageModal" class="modal">
+    <div class="modal-content image-modal-content">
+        <div class="modal-header">
+            <span class="close" onclick="closeImageModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <img id="modal-image" src="" alt="画像">
+        </div>
+    </div>
+</div>
+
 <script>
 // 取引完了モーダル
 function openCompleteModal() {
@@ -317,8 +353,14 @@ function closeRatingModal() {
 // モーダル外をクリックしたら閉じる
 window.onclick = function(event) {
     const ratingModal = document.getElementById('ratingModal');
+    const imageModal = document.getElementById('imageModal');
+
     if (event.target == ratingModal) {
         ratingModal.style.display = 'none';
+    }
+
+    if (event.target == imageModal) {
+        imageModal.style.display = 'none';
     }
 }
 
@@ -439,6 +481,41 @@ function editMessage(messageId, currentMessage) {
             alert('メッセージの編集に失敗しました');
         });
     }
+}
+
+// 画像プレビュー
+function previewImage(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('image-preview');
+            const previewImg = document.getElementById('preview-img');
+            previewImg.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+// 画像削除
+function removeImage() {
+    const imageInput = document.getElementById('image-input');
+    const preview = document.getElementById('image-preview');
+    imageInput.value = '';
+    preview.style.display = 'none';
+}
+
+// 画像モーダル
+function openImageModal(imageSrc) {
+    const modal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modal-image');
+    modalImage.src = imageSrc;
+    modal.style.display = 'block';
+}
+
+function closeImageModal() {
+    document.getElementById('imageModal').style.display = 'none';
 }
 </script>
 

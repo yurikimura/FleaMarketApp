@@ -287,8 +287,14 @@ class UserController extends Controller
     public function sendMessage(Request $request, $itemId)
     {
         $request->validate([
-            'message' => 'required|string|max:1000',
+            'message' => 'nullable|string|max:1000',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
+
+        // メッセージまたは画像のいずれかが必須
+        if (!$request->message && !$request->hasFile('image')) {
+            return redirect()->back()->withErrors(['message' => 'メッセージまたは画像のいずれかを入力してください。']);
+        }
 
         $user = User::find(Auth::id());
         $item = Item::findOrFail($itemId);
@@ -316,11 +322,26 @@ class UserController extends Controller
             $receiverId = $soldItem ? $soldItem->user_id : SoldItem::where('item_id', $itemId)->first()->user_id;
         }
 
+        // 画像アップロード処理
+        $imagePath = null;
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $imagePath = Storage::disk('public')->put('chat_images', $image);
+
+            // デバッグ用ログ
+            \Log::info('画像保存完了', [
+                'image_path' => $imagePath,
+                'original_name' => $image->getClientOriginalName(),
+                'file_size' => $image->getSize()
+            ]);
+        }
+
         Message::create([
             'sender_id' => $user->id,
             'receiver_id' => $receiverId,
             'item_id' => $itemId,
             'message' => $request->message,
+            'image_path' => $imagePath,
             'is_read' => false,
         ]);
 
