@@ -393,7 +393,40 @@ document.querySelectorAll('.rating-stars .star').forEach((star, index) => {
         // モーダル内の対応するラジオボタンを選択
         document.getElementById(`star${rating}`).checked = true;
     });
+
+    // ホバー時に右側の星を黄色にする
+    star.addEventListener('mouseenter', function() {
+        const rating = parseInt(this.getAttribute('data-rating'));
+        const stars = document.querySelectorAll('.rating-stars .star');
+
+        // 全ての星のホバー効果をリセット
+        stars.forEach(s => {
+            s.classList.remove('hover-right');
+        });
+
+        // ホバーした星の右側を黄色にする
+        for (let i = rating; i < stars.length; i++) {
+            stars[i].classList.add('hover-right');
+        }
+    });
+
+    // ホバー終了時にホバー効果を削除
+    star.addEventListener('mouseleave', function() {
+        document.querySelectorAll('.rating-stars .star').forEach(s => {
+            s.classList.remove('hover-right');
+        });
+    });
 });
+
+// 星評価のコンテナ全体からマウスが離れた時もホバー効果をリセット
+const ratingStarsContainer = document.querySelector('.rating-stars');
+if (ratingStarsContainer) {
+    ratingStarsContainer.addEventListener('mouseleave', function() {
+        document.querySelectorAll('.rating-stars .star').forEach(s => {
+            s.classList.remove('hover-right');
+        });
+    });
+}
 
 // モーダル内の星評価の処理
 document.querySelectorAll('.star-rating input').forEach(input => {

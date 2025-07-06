@@ -286,7 +286,7 @@
 }
 
 .message--received .message__content {
-    background-color: white;
+    background-color: #D9D9D9;
     color: #333;
     border: 1px solid #ddd;
 }
@@ -695,6 +695,12 @@
     transform: scale(1.15);
 }
 
+/* ホバー時に右側の星を黄色にする */
+.star-rating .star:hover ~ .star {
+    color: #ffcc00;
+    transform: scale(1.1);
+}
+
 .star-rating input:checked ~ .star {
     color: #ffcc00;
     transform: scale(1.1);
@@ -802,6 +808,12 @@
 .rating-stars .star:hover {
     color: #ffcc00;
     transform: scale(1.2);
+}
+
+/* ホバー時に右側の星を黄色にする準備 */
+.rating-stars .star.hover-right {
+    color: #ffcc00;
+    transform: scale(1.1);
 }
 
 .rating-stars .star.selected {
