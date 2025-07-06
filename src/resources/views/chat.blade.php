@@ -20,7 +20,7 @@
     <div class="chat-layout">
         <!-- サイドバー -->
         <div class="chat__sidebar">
-            <h3 class="sidebar__title">取引中の商品</h3>
+            <h3 class="sidebar__title">その他の取引</h3>
             <div class="sidebar__transactions">
                 @if($otherTransactions->count() > 0)
                     @foreach($otherTransactions as $transaction)
@@ -135,6 +135,17 @@
                 @if($messages->count() > 0)
                     @foreach($messages as $message)
                         <div class="message {{ $message->sender_id === $user->id ? 'message--sent' : 'message--received' }}">
+                            <!-- ユーザー情報 -->
+                            <div class="message__user-info">
+                                <div class="message__user-avatar">
+                                    @if($message->sender->profile && $message->sender->profile->img_url)
+                                        <img src="{{ \Storage::url($message->sender->profile->img_url) }}" alt="ユーザーアイコン">
+                                    @else
+                                        <img src="{{ asset('img/icon.png') }}" alt="ユーザーアイコン">
+                                    @endif
+                                </div>
+                                <span class="message__user-name">{{ $message->sender->name }}</span>
+                            </div>
                             <div class="message__content">
                                 @if($message->image_path)
                                     <div class="message__image">
