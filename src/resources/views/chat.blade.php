@@ -460,26 +460,26 @@ document.querySelectorAll('.rating-stars .star').forEach((star, index) => {
         document.getElementById(`star${rating}`).checked = true;
     });
 
-    // ホバー時に右側の星を黄色にする
+    // ホバー時に左から右に星を黄色にする
     star.addEventListener('mouseenter', function() {
         const rating = parseInt(this.getAttribute('data-rating'));
         const stars = document.querySelectorAll('.rating-stars .star');
 
         // 全ての星のホバー効果をリセット
         stars.forEach(s => {
-            s.classList.remove('hover-right');
+            s.classList.remove('hover-highlight');
         });
 
-        // ホバーした星の右側を黄色にする
-        for (let i = rating; i < stars.length; i++) {
-            stars[i].classList.add('hover-right');
+        // ホバーした星まで（左から右に）黄色にする
+        for (let i = 0; i < rating; i++) {
+            stars[i].classList.add('hover-highlight');
         }
     });
 
     // ホバー終了時にホバー効果を削除
     star.addEventListener('mouseleave', function() {
         document.querySelectorAll('.rating-stars .star').forEach(s => {
-            s.classList.remove('hover-right');
+            s.classList.remove('hover-highlight');
         });
     });
 });
@@ -489,7 +489,7 @@ const ratingStarsContainer = document.querySelector('.rating-stars');
 if (ratingStarsContainer) {
     ratingStarsContainer.addEventListener('mouseleave', function() {
         document.querySelectorAll('.rating-stars .star').forEach(s => {
-            s.classList.remove('hover-right');
+            s.classList.remove('hover-highlight');
         });
     });
 }

@@ -807,8 +807,8 @@
     transform: scale(1.2);
 }
 
-/* ホバー時に右側の星を黄色にする準備 */
-.rating-stars .star.hover-right {
+/* ホバー時に左から右に星を黄色にする */
+.rating-stars .star.hover-highlight {
     color: #ffcc00;
     transform: scale(1.1);
 }
