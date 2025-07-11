@@ -96,12 +96,42 @@ class User extends Authenticatable
      */
     public function getUnreadMessageCountForPurchasedItems()
     {
-        $purchasedItemIds = \App\Models\SoldItem::where('user_id', $this->id)->pluck('item_id');
+        // 取引中の商品のみを対象とする
+        $purchasedItemIds = \App\Models\SoldItem::where('user_id', $this->id)
+                                                ->where('is_completed', false) // 取引中のみ
+                                                ->pluck('item_id');
 
         return $this->receivedMessages()
             ->whereIn('item_id', $purchasedItemIds)
             ->where('is_read', false)
             ->count();
+    }
+
+    /**
+     * 出品者として取引中の商品に関する未読メッセージ数を取得
+     */
+    public function getUnreadMessageCountForSoldItems()
+    {
+        // 出品者として取引中の商品のみを対象とする
+        $soldItemIds = \App\Models\Item::where('user_id', $this->id)
+                                     ->whereHas('soldItem', function($query) {
+                                         $query->where('is_completed', false); // 取引中のみ
+                                     })
+                                     ->pluck('id');
+
+        return $this->receivedMessages()
+            ->whereIn('item_id', $soldItemIds)
+            ->where('is_read', false)
+            ->count();
+    }
+
+    /**
+     * 全ての取引中の商品に関する未読メッセージ数を取得
+     */
+    public function getUnreadMessageCountForAllTradingItems()
+    {
+        return $this->getUnreadMessageCountForPurchasedItems() +
+               $this->getUnreadMessageCountForSoldItems();
     }
 
     /**

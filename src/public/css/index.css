@@ -64,3 +64,98 @@
     padding: 20px 80px;
     font-weight: bold;
 }
+
+/* レスポンシブデザイン対応 */
+
+/* タブレット (768px-850px) 対応 */
+@media screen and (min-width: 768px) and (max-width: 850px) {
+    .items {
+        justify-content: center;
+        gap: 25px 15px;
+        padding: 0 20px;
+    }
+
+    .item__img {
+        width: 12em;
+        height: 12em;
+    }
+
+    .border__list li {
+        padding: 15px 40px;
+    }
+
+    .border__list li:first-child {
+        padding-left: 5%;
+    }
+}
+
+/* PC (1400px-1540px) 対応 */
+@media screen and (min-width: 1400px) and (max-width: 1540px) {
+    .items {
+        justify-content: flex-start;
+        gap: 40px 20px;
+        padding: 0 40px;
+    }
+
+    .item__img {
+        width: 16em;
+        height: 16em;
+    }
+
+    .border__list li {
+        padding: 20px 100px;
+    }
+
+    .border__list li:first-child {
+        padding-left: 8%;
+    }
+}
+
+/* 小さな画面 (768px以下) 対応 */
+@media screen and (max-width: 767px) {
+    .items {
+        justify-content: center;
+        gap: 20px 10px;
+        padding: 0 10px;
+    }
+
+    .item__img {
+        width: 10em;
+        height: 10em;
+    }
+
+    .border__list {
+        flex-direction: column;
+    }
+
+    .border__list li {
+        padding: 10px 20px;
+        text-align: center;
+    }
+
+    .border__list li:first-child {
+        padding-left: 20px;
+    }
+}
+
+/* 一般的な画面サイズ (851px-1399px) 対応 */
+@media screen and (min-width: 851px) and (max-width: 1399px) {
+    .items {
+        justify-content: flex-start;
+        gap: 30px 15px;
+        padding: 0 30px;
+    }
+
+    .item__img {
+        width: 15em;
+        height: 15em;
+    }
+
+    .border__list li {
+        padding: 20px 60px;
+    }
+
+    .border__list li:first-child {
+        padding-left: 8%;
+    }
+}

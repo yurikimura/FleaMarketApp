@@ -10,6 +10,7 @@ use App\Models\Item;
 use App\Models\SoldItem;
 use App\Models\Message;
 use App\Http\Requests\ProfileRequest;
+use App\Http\Requests\MessageRequest;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Rating;
 use App\Mail\TransactionCompletedMail;
@@ -93,6 +94,17 @@ class UserController extends Controller
                                                             ->where('is_read', false)
                                                             ->count();
                                 $item->transaction_type = 'purchased'; // 購入者として
+
+                                // 最新メッセージの日時を取得
+                                $latestMessage = Message::where('item_id', $item->id)
+                                                       ->where(function($query) use ($user) {
+                                                           $query->where('sender_id', $user->id)
+                                                                 ->orWhere('receiver_id', $user->id);
+                                                       })
+                                                       ->latest('created_at')
+                                                       ->first();
+                                $item->latest_message_at = $latestMessage ? $latestMessage->created_at : null;
+
                                 return $item;
                             });
 
@@ -110,11 +122,26 @@ class UserController extends Controller
                                                            ->where('is_read', false)
                                                            ->count();
                                $item->transaction_type = 'sold'; // 出品者として
+
+                               // 最新メッセージの日時を取得
+                               $latestMessage = Message::where('item_id', $item->id)
+                                                      ->where(function($query) use ($user) {
+                                                          $query->where('sender_id', $user->id)
+                                                                ->orWhere('receiver_id', $user->id);
+                                                      })
+                                                      ->latest('created_at')
+                                                      ->first();
+                               $item->latest_message_at = $latestMessage ? $latestMessage->created_at : null;
+
                                return $item;
                            });
 
-            // 購入者と出品者の取引中商品を結合
-            $items = $purchasedItems->concat($soldItems);
+            // 購入者と出品者の取引中商品を結合し、最新メッセージの日時で並べ替え
+            $items = $purchasedItems->concat($soldItems)
+                                  ->sortByDesc(function ($item) {
+                                      return $item->latest_message_at;
+                                  })
+                                  ->values(); // インデックスを再配置
         } else {
             $items = Item::where('user_id', $user->id)->get();
         }
@@ -136,8 +163,9 @@ class UserController extends Controller
         // 未読メッセージ数を取得
         $unreadMessageCount = $user->getUnreadMessageCount();
         $unreadMessageCountForPurchasedItems = $user->getUnreadMessageCountForPurchasedItems();
+        $unreadMessageCountForAllTradingItems = $user->getUnreadMessageCountForAllTradingItems();
 
-        return view('mypage', compact('user', 'items', 'unreadMessageCount', 'unreadMessageCountForPurchasedItems', 'tradingItemsCount'));
+        return view('mypage', compact('user', 'items', 'unreadMessageCount', 'unreadMessageCountForPurchasedItems', 'unreadMessageCountForAllTradingItems', 'tradingItemsCount'));
     }
 
     /**
@@ -210,8 +238,9 @@ class UserController extends Controller
      */
     private function getUserTransactions($user, $excludeItemId = null)
     {
-        // 購入した商品
+        // 購入した商品（取引中のみ）
         $purchasedItems = SoldItem::where('user_id', $user->id)
+                                 ->where('is_completed', false) // 取引中のみ
                                  ->when($excludeItemId, function($query, $excludeItemId) {
                                      return $query->where('item_id', '!=', $excludeItemId);
                                  })
@@ -242,9 +271,11 @@ class UserController extends Controller
                                      return $item;
                                  });
 
-        // 出品した商品（売れた商品のみ）
+        // 出品した商品（売れた商品で取引中のみ）
         $soldItems = Item::where('user_id', $user->id)
-                        ->whereHas('soldItem')
+                        ->whereHas('soldItem', function($query) {
+                            $query->where('is_completed', false); // 取引中のみ
+                        })
                         ->when($excludeItemId, function($query, $excludeItemId) {
                             return $query->where('id', '!=', $excludeItemId);
                         })
@@ -284,21 +315,12 @@ class UserController extends Controller
     /**
      * メッセージを送信
      */
-    public function sendMessage(Request $request, $itemId)
+    public function sendMessage(MessageRequest $request, $itemId)
     {
         \Log::info('メッセージ送信リクエスト', [
             'request' => $request->all(),
             'item_id' => $itemId,
         ]);
-        // $request->validate([
-        //     'message' => 'nullable|string|max:1000',
-        //     'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048000',
-        // ]);
-
-        // メッセージまたは画像のいずれかが必須
-        if (!$request->message && !$request->hasFile('image')) {
-            return redirect()->back()->withErrors(['message' => 'メッセージまたは画像のいずれかを入力してください。']);
-        }
 
         $user = User::find(Auth::id());
         $item = Item::findOrFail($itemId);
@@ -357,7 +379,7 @@ class UserController extends Controller
     /**
      * メッセージを編集
      */
-    public function updateMessage(Request $request, Message $message)
+    public function updateMessage(MessageRequest $request, Message $message)
     {
         // メッセージの所有者チェック
         if ($message->sender_id !== Auth::id()) {
@@ -418,7 +440,41 @@ class UserController extends Controller
             return response()->json(['error' => '取引完了権限がありません'], 403);
         }
 
-        return response()->json(['success' => '取引完了ボタンが押されました']);
+        // 既に取引完了済みの場合
+        if ($soldItem->is_completed) {
+            return response()->json(['error' => '既に取引完了済みです'], 400);
+        }
+
+        // 取引完了状態を更新
+        $soldItem->update(['is_completed' => true]);
+
+        // 出品者にメール通知を送信
+        $seller = User::find($item->user_id);
+        $buyer = User::find($soldItem->user_id);
+        $mailSent = false;
+
+        try {
+            Mail::to($seller->email)->send(new TransactionCompletedMail($item, $buyer, $seller));
+            $mailSent = true;
+            \Log::info('取引完了メール送信成功', [
+                'item_id' => $itemId,
+                'seller_email' => $seller->email,
+                'buyer_name' => $buyer->name,
+                'item_name' => $item->name
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('取引完了メール送信エラー: ' . $e->getMessage(), [
+                'item_id' => $itemId,
+                'seller_email' => $seller->email,
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        $message = $mailSent ?
+            '取引が完了しました。出品者にメールで通知しました。' :
+            '取引が完了しました。（メール送信でエラーが発生しましたが、取引完了処理は正常に完了しました）';
+
+        return response()->json(['success' => $message]);
     }
 
     public function storeRating(Request $request)
@@ -450,20 +506,10 @@ class UserController extends Controller
             return response()->json(['error' => '既に評価済みです'], 400);
         }
 
-        // 取引完了状態を更新
+        // 取引が完了していることを確認
         $soldItem = SoldItem::where('item_id', $itemId)->first();
-        if ($soldItem) {
-            $soldItem->update(['is_completed' => true]);
-
-            // 出品者にメール通知を送信
-            $seller = User::find($item->user_id);
-            $buyer = User::find($soldItem->user_id);
-
-            try {
-                Mail::to($seller->email)->send(new TransactionCompletedMail($item, $buyer, $seller));
-            } catch (\Exception $e) {
-                \Log::error('取引完了メール送信エラー: ' . $e->getMessage());
-            }
+        if (!$soldItem || !$soldItem->is_completed) {
+            return response()->json(['error' => '取引が完了していません'], 400);
         }
 
         // 評価を保存

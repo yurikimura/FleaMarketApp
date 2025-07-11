@@ -673,8 +673,8 @@
 
 .star-rating {
     display: flex;
-    flex-direction: row-reverse;
-    justify-content: flex-end;
+    flex-direction: row;
+    justify-content: flex-start;
     gap: 8px;
 }
 
@@ -695,15 +695,12 @@
     transform: scale(1.15);
 }
 
-/* ホバー時に右側の星を黄色にする */
-.star-rating .star:hover ~ .star {
+/* 星の選択状態とホバー効果 */
+.star-rating .star:hover,
+.star-rating .star.selected,
+.star-rating .star.hover {
     color: #ffcc00;
-    transform: scale(1.1);
-}
-
-.star-rating input:checked ~ .star {
-    color: #ffcc00;
-    transform: scale(1.1);
+    transform: scale(1.15);
 }
 
 .comment-input {

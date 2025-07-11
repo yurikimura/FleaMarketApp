@@ -231,3 +231,142 @@ header{
 .header__search-button:hover {
     background-color: #f0f0f0;
 }
+
+/* タブレット (768px-850px) 対応 */
+@media screen and (min-width: 768px) and (max-width: 850px) {
+    header {
+        padding: 0 15px;
+    }
+
+    .header__logo {
+        width: 180px;
+        min-width: 180px;
+    }
+
+    .header__logo img {
+        width: 180px;
+    }
+
+    .header__search {
+        margin-left: 15px;
+        margin-right: 15px;
+    }
+
+    .header__search-input {
+        width: 250px;
+        max-width: 250px;
+    }
+
+    .header__nav li {
+        margin-right: 15px;
+    }
+
+    .header__nav li:last-child {
+        margin-right: 0;
+    }
+
+    .header__btn {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+
+    .center {
+        width: 90%;
+        max-width: 680px;
+    }
+
+    .btn {
+        width: 100%;
+        max-width: 450px;
+    }
+}
+
+/* PC (1400px-1540px) 対応 */
+@media screen and (min-width: 1400px) and (max-width: 1540px) {
+    header {
+        padding: 0 40px;
+    }
+
+    .header__logo {
+        width: 280px;
+        min-width: 280px;
+    }
+
+    .header__logo img {
+        width: 280px;
+    }
+
+    .header__search {
+        margin-left: 30px;
+        margin-right: 30px;
+    }
+
+    .header__search-input {
+        width: 500px;
+        max-width: 500px;
+    }
+
+    .header__nav li {
+        margin-right: 40px;
+    }
+
+    .header__nav li:last-child {
+        margin-right: 0;
+    }
+
+    .center {
+        width: 1200px;
+        max-width: 1200px;
+    }
+}
+
+/* 小さな画面 (768px以下) 対応 */
+@media screen and (max-width: 767px) {
+    header {
+        padding: 0 10px;
+        height: 50px;
+    }
+
+    .header__logo {
+        width: 120px;
+        min-width: 120px;
+    }
+
+    .header__logo img {
+        width: 120px;
+    }
+
+    .header__search {
+        margin-left: 10px;
+        margin-right: 10px;
+    }
+
+    .header__search-input {
+        width: 150px;
+        max-width: 150px;
+        font-size: 12px;
+    }
+
+    .header__nav li {
+        margin-right: 10px;
+    }
+
+    .header__nav li:last-child {
+        margin-right: 0;
+    }
+
+    .header__btn {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    .center {
+        width: 95%;
+        padding: 30px 0;
+    }
+
+    .btn {
+        width: 100%;
+        max-width: 300px;
+    }
+}

@@ -206,12 +206,33 @@
                             <p>評価済みです</p>
                         @endif
                     </div>
-                @else
-                    <!-- 通常のメッセージ入力フォーム -->
+
+                    <!-- 取引完了後でも通常のメッセージ入力フォーム -->
                     <form action="{{ route('chat.message.send', $item->id) }}" method="POST" class="message-form" enctype="multipart/form-data">
                         @csrf
                         <div class="input-container">
-                            <textarea name="message" placeholder="メッセージを入力してください" class="message-input"></textarea>
+                            <textarea name="message" placeholder="メッセージを入力してください" class="message-input" data-item-id="{{ $item->id }}"></textarea>
+                            <div class="image-upload-container">
+                                <input type="file" name="image" id="image-input" accept="image/*" style="display: none;" onchange="previewImage(event)">
+                                <button type="button" class="btn-image" onclick="document.getElementById('image-input').click()">
+                                    画像を追加
+                                </button>
+                                <div id="image-preview" style="display: none;">
+                                    <img id="preview-img" src="" alt="プレビュー">
+                                    <button type="button" class="btn-remove-image" onclick="removeImage()">×</button>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-send">
+                                <img src="{{ asset('img/send.jpg') }}" alt="送信" class="send-icon">
+                            </button>
+                        </div>
+                    </form>
+                @else
+                    <!-- 通常のメッセージ入力フォーム（取引完了前） -->
+                    <form action="{{ route('chat.message.send', $item->id) }}" method="POST" class="message-form" enctype="multipart/form-data">
+                        @csrf
+                        <div class="input-container">
+                            <textarea name="message" placeholder="メッセージを入力してください" class="message-input" data-item-id="{{ $item->id }}"></textarea>
                             <div class="image-upload-container">
                                 <input type="file" name="image" id="image-input" accept="image/*" style="display: none;" onchange="previewImage(event)">
                                 <button type="button" class="btn-image" onclick="document.getElementById('image-input').click()">
@@ -259,16 +280,16 @@
 
                 <div class="rating-input">
                     <div class="star-rating">
-                        <input type="radio" name="rating" value="5" id="star5" required>
-                        <label for="star5" class="star">★</label>
-                        <input type="radio" name="rating" value="4" id="star4">
-                        <label for="star4" class="star">★</label>
-                        <input type="radio" name="rating" value="3" id="star3">
-                        <label for="star3" class="star">★</label>
+                        <input type="radio" name="rating" value="1" id="star1" required>
+                        <label for="star1" class="star">★</label>
                         <input type="radio" name="rating" value="2" id="star2">
                         <label for="star2" class="star">★</label>
-                        <input type="radio" name="rating" value="1" id="star1">
-                        <label for="star1" class="star">★</label>
+                        <input type="radio" name="rating" value="3" id="star3">
+                        <label for="star3" class="star">★</label>
+                        <input type="radio" name="rating" value="4" id="star4">
+                        <label for="star4" class="star">★</label>
+                        <input type="radio" name="rating" value="5" id="star5">
+                        <label for="star5" class="star">★</label>
                     </div>
                 </div>
                 <div class="modal-actions">
@@ -311,6 +332,51 @@
 </div>
 
 <script>
+// チャットメッセージの入力内容を保持する機能
+document.addEventListener('DOMContentLoaded', function() {
+    const messageInput = document.querySelector('.message-input');
+    const messageForm = document.querySelector('.message-form');
+    const itemId = {{ $item->id }};
+    const storageKey = `chat_draft_${itemId}`;
+
+    // ページ読み込み時に保存された下書きを復元
+    if (messageInput) {
+        const savedMessage = sessionStorage.getItem(storageKey);
+        if (savedMessage) {
+            messageInput.value = savedMessage;
+        }
+
+        // 入力時に自動保存
+        messageInput.addEventListener('input', function() {
+            if (this.value.trim() !== '') {
+                sessionStorage.setItem(storageKey, this.value);
+            } else {
+                sessionStorage.removeItem(storageKey);
+            }
+        });
+    }
+
+    // フォーム送信時に下書きを削除
+    if (messageForm) {
+        messageForm.addEventListener('submit', function() {
+            sessionStorage.removeItem(storageKey);
+        });
+    }
+
+    // URLパラメータをチェック
+    const urlParams = new URLSearchParams(window.location.search);
+    const showRating = urlParams.get('show_rating');
+
+    // 購入者で取引完了済みで未評価の場合、評価モーダルを自動表示
+    @if($isBuyer && $isCompleted && !$hasRated)
+        if (showRating === 'true') {
+            setTimeout(() => {
+                openRatingModal();
+            }, 500);
+        }
+    @endif
+});
+
 // 取引完了モーダル
 function openCompleteModal() {
     document.getElementById('completeModal').style.display = 'block';
@@ -429,12 +495,55 @@ if (ratingStarsContainer) {
 }
 
 // モーダル内の星評価の処理
+document.querySelectorAll('.star-rating .star').forEach((star, index) => {
+    // ホバー効果
+    star.addEventListener('mouseenter', function() {
+        const rating = index + 1;
+        const stars = document.querySelectorAll('.star-rating .star');
+        stars.forEach((s, i) => {
+            if (i < rating) {
+                s.classList.add('hover');
+            } else {
+                s.classList.remove('hover');
+            }
+        });
+    });
+
+    // ホバー終了時
+    star.addEventListener('mouseleave', function() {
+        document.querySelectorAll('.star-rating .star').forEach(s => {
+            s.classList.remove('hover');
+        });
+    });
+
+    // クリック効果
+    star.addEventListener('click', function() {
+        const rating = index + 1;
+        const radioButton = document.getElementById(`star${rating}`);
+        if (radioButton) {
+            radioButton.checked = true;
+            radioButton.dispatchEvent(new Event('change'));
+        }
+    });
+});
+
+// モーダル内の星評価コンテナ全体からマウスが離れた時もホバー効果をリセット
+const starRatingContainer = document.querySelector('.star-rating');
+if (starRatingContainer) {
+    starRatingContainer.addEventListener('mouseleave', function() {
+        document.querySelectorAll('.star-rating .star').forEach(s => {
+            s.classList.remove('hover');
+        });
+    });
+}
+
+// ラジオボタンの変更イベント
 document.querySelectorAll('.star-rating input').forEach(input => {
     input.addEventListener('change', function() {
-        const rating = this.value;
+        const rating = parseInt(this.value);
         const stars = document.querySelectorAll('.star-rating .star');
         stars.forEach((star, index) => {
-            if (index >= 5 - rating) {
+            if (index < rating) {
                 star.classList.add('selected');
             } else {
                 star.classList.remove('selected');
@@ -481,22 +590,6 @@ document.getElementById('ratingForm').addEventListener('submit', function(e) {
         console.error('Error:', error);
         alert('評価の送信に失敗しました');
     });
-});
-
-// ページ読み込み時の処理
-document.addEventListener('DOMContentLoaded', function() {
-    // URLパラメータをチェック
-    const urlParams = new URLSearchParams(window.location.search);
-    const showRating = urlParams.get('show_rating');
-
-    // 購入者で取引完了済みで未評価の場合、評価モーダルを自動表示
-    @if($isBuyer && $isCompleted && !$hasRated)
-        if (showRating === 'true') {
-            setTimeout(() => {
-                openRatingModal();
-            }, 500);
-        }
-    @endif
 });
 
 function editMessage(messageId, currentMessage) {
