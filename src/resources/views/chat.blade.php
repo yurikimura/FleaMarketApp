@@ -17,6 +17,23 @@
         </div>
     @endif
 
+    <!-- バリデーションエラーの表示 -->
+    @if($errors->any())
+        <div class="alert alert-error alert-prominent">
+            <div class="alert-icon">
+                <span class="error-icon">⚠️</span>
+            </div>
+            <div class="alert-content">
+                <h4 class="alert-title">入力エラー</h4>
+                <ul class="error-list">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        </div>
+    @endif
+
     <div class="chat-layout">
         <!-- サイドバー -->
         <div class="chat__sidebar">
@@ -188,11 +205,20 @@
 
             <!-- メッセージ入力フォーム -->
             <div class="chat__input">
-                @if($isCompleted)
-                    <!-- 取引完了後のメッセージ -->
+                @if($isCompleted && $hasRated)
+                    <!-- 評価完了後はメッセージ送信不可 -->
+                    <div class="transaction-completed-message">
+                        <p>✅ 取引と評価が完了しました。</p>
+                        <p>この取引のチャットは終了しており、新しいメッセージを送信することはできません。</p>
+                        <div class="completed-info">
+                            <span class="completed-badge">取引完了・評価済み</span>
+                        </div>
+                    </div>
+                @elseif($isCompleted && !$hasRated)
+                    <!-- 取引完了後、評価前 -->
                     <div class="transaction-completed-message">
                         <p>取引が完了しました。</p>
-                        @if($canRate && !$hasRated)
+                        @if($canRate)
                             <p>今回の取引相手はどうでしたか？</p>
                             <div class="rating-stars">
                                 <span class="star" data-rating="1">★</span>
@@ -202,16 +228,14 @@
                                 <span class="star" data-rating="5">★</span>
                             </div>
                             <button type="button" class="btn-rating" onclick="openRatingModal()">送信する</button>
-                        @elseif($hasRated)
-                            <p>評価済みです</p>
                         @endif
                     </div>
 
-                    <!-- 取引完了後でも通常のメッセージ入力フォーム -->
+                    <!-- 評価前なら一時的にメッセージ送信可能 -->
                     <form action="{{ route('chat.message.send', $item->id) }}" method="POST" class="message-form" enctype="multipart/form-data">
                         @csrf
                         <div class="input-container">
-                            <textarea name="message" placeholder="メッセージを入力してください" class="message-input" data-item-id="{{ $item->id }}"></textarea>
+                            <textarea name="message" placeholder="評価前の最後のメッセージを入力してください" class="message-input" data-item-id="{{ $item->id }}"></textarea>
                             <div class="image-upload-container">
                                 <input type="file" name="image" id="image-input" accept="image/*" style="display: none;" onchange="previewImage(event)">
                                 <button type="button" class="btn-image" onclick="document.getElementById('image-input').click()">
@@ -334,6 +358,18 @@
 <script>
 // チャットメッセージの入力内容を保持する機能
 document.addEventListener('DOMContentLoaded', function() {
+    // エラーメッセージがある場合、自動でスクロールして注意を引く
+    const errorAlert = document.querySelector('.alert-error');
+    if (errorAlert) {
+        errorAlert.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        // 5秒後にエラーメッセージを薄くする
+        setTimeout(() => {
+            errorAlert.style.opacity = '0.8';
+            errorAlert.style.transform = 'scale(0.98)';
+        }, 5000);
+    }
+
     const messageInput = document.querySelector('.message-input');
     const messageForm = document.querySelector('.message-form');
     const itemId = {{ $item->id }};

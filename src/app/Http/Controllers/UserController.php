@@ -334,9 +334,31 @@ class UserController extends Controller
             abort(403, 'この取引にメッセージを送信する権限がありません。');
         }
 
-        // 取引完了後はメッセージ送信を禁止
-        if ($soldItem && $soldItem->is_completed) {
-            return redirect()->route('chat.show', $itemId)->with('error', '取引完了後はメッセージを送信できません。');
+        // 評価完了後はメッセージ送信を禁止
+        $itemSoldInfo = SoldItem::where('item_id', $itemId)->first();
+
+        if ($itemSoldInfo && $itemSoldInfo->is_completed) {
+            // 取引相手を特定
+            $partnerId = null;
+            if ($soldItem && $soldItem->user_id === $user->id) {
+                // 購入者の場合、出品者を評価対象とする
+                $partnerId = $item->user_id;
+            } elseif ($item->user_id === $user->id) {
+                // 出品者の場合、購入者を評価対象とする
+                $partnerId = $itemSoldInfo->user_id;
+            }
+
+            // 既に評価済みかチェック
+            if ($partnerId) {
+                $hasRated = Rating::where('rater_id', $user->id)
+                                 ->where('rated_user_id', $partnerId)
+                                 ->where('item_id', $itemId)
+                                 ->exists();
+
+                if ($hasRated) {
+                    return redirect()->route('chat.show', $itemId)->with('error', '評価完了後は新しいメッセージを送信できません。');
+                }
+            }
         }
 
         // 受信者を決定（購入者なら出品者に、出品者なら購入者に）
